@@ -54,17 +54,39 @@ Projeto pessoal construído inteiramente no navegador, sem dependências externa
 
 ---
 
-## 🛠️ Tecnologias usadas
+## 🛠️ Construído com
+
+### Editor (a ferramenta em si)
+
+| Tecnologia | Versão | Uso |
+|---|---|---|
+| [React](https://react.dev) | 18.2 | Interface do editor — componentes, estado, hooks |
+| [Babel Standalone](https://babeljs.io) | 7.23 | Transpila JSX diretamente no browser, sem build |
+| [Google Fonts](https://fonts.google.com) | — | Syne, DM Sans, Space Mono, Playfair Display, Poppins, Cabinet Grotesk |
+| CSS puro | — | Layout, animações, dark theme do editor |
+| LocalStorage API | — | Persistência automática do rascunho entre sessões |
+
+### Portfólio gerado (o arquivo exportado)
 
 | Tecnologia | Uso |
 |---|---|
-| React 18 (via CDN) | Interface do editor |
-| Babel Standalone | Transpila JSX no browser |
-| Google Fonts | Tipografias do editor e dos templates |
-| Vanilla JS | Geração do HTML do portfólio exportado |
-| LocalStorage | Persistência do rascunho |
+| HTML5 semântico | Estrutura de todas as seções |
+| CSS inline | Estilização isolada, sem conflito externo |
+| Google Fonts (CDN) | Tipografias carregadas no portfólio final |
+| SVG inline | Ícones das redes sociais sem dependência de biblioteca |
+| Vanilla JS puro | Nenhum framework no arquivo exportado |
 
-> **Zero dependências de servidor.** Nenhum npm, nenhum build, nenhum backend.
+### Conceitos e padrões aplicados
+
+- **Component-based UI** com React functional components e hooks (`useState`, `useEffect`, `useCallback`, `useMemo`, `useRef`)
+- **Debounce** no preview para evitar rerenders excessivos durante digitação
+- **Geração de HTML via string** — o portfólio é montado como template literal e injetado em um `<iframe>` em tempo real
+- **Drag & drop nativo** da Web API para reordenar projetos e experiências
+- **FileReader API** para upload e preview de imagem local sem servidor
+- **Clipboard API** para copiar o código gerado
+- **Blob + URL.createObjectURL** para download do arquivo HTML sem backend
+
+> **Zero dependências de servidor.** Nenhum npm, nenhum build, nenhum backend. Um arquivo HTML de ~100KB que abre direto no navegador.
 
 ---
 
