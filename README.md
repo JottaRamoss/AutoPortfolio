@@ -56,6 +56,17 @@ Projeto pessoal construído inteiramente no navegador, sem dependências externa
 
 ## 🛠️ Construído com
 
+![React](https://img.shields.io/badge/React-18.2-61dafb?style=for-the-badge&logo=react&logoColor=black)
+![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-f7df1e?style=for-the-badge&logo=javascript&logoColor=black)
+![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
+![Babel](https://img.shields.io/badge/Babel-7.23-f9dc3e?style=for-the-badge&logo=babel&logoColor=black)
+![Google Fonts](https://img.shields.io/badge/Google_Fonts-4285F4?style=for-the-badge&logo=google&logoColor=white)
+![No Build](https://img.shields.io/badge/No_Build-✓-c8f135?style=for-the-badge)
+![No Backend](https://img.shields.io/badge/No_Backend-✓-c8f135?style=for-the-badge)
+![GitHub Pages](https://img.shields.io/badge/GitHub_Pages-Ready-222?style=for-the-badge&logo=github&logoColor=white)
+
+
 ### Editor (a ferramenta em si)
 
 | Tecnologia | Versão | Uso |
