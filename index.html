@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>AutoPortfolio ◈ Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=Space+Mono:wght@400;700&family=Playfair+Display:ital,wght@0,700;1,400;1,700&family=Cabinet+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
+<style>
+/* ── Reset ── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body,#root{height:100%;overflow:hidden}
+body{font-family:'DM Sans',sans-serif;background:#0a0a0c;color:#f0f0f2;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:#2a2a35;border-radius:2px}
+*{scrollbar-width:thin;scrollbar-color:#2a2a35 transparent}
+
+/* ── Animations ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes slideRight{from{transform:translateX(-8px);opacity:0}to{transform:translateX(0);opacity:1}}
+
+.fade-up{animation:fadeUp .25s ease forwards}
+.fade-in{animation:fadeIn .2s ease forwards}
+
+/* ── Drag ── */
+.dragging{opacity:.4;pointer-events:none}
+.drag-over{outline:2px dashed var(--accent,#c8f135);outline-offset:3px;border-radius:8px}
+
+/* ── Range input ── */
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer;width:100%}
+input[type=range]::-webkit-slider-track{background:#2a2a35;height:4px;border-radius:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent,#c8f135);margin-top:-5px}
+input[type=range]::-moz-range-track{background:#2a2a35;height:4px;border-radius:2px}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--accent,#c8f135);border:none}
+
+/* ── Color input ── */
+input[type=color]{-webkit-appearance:none;appearance:none;border:none;background:none;cursor:pointer;width:28px;height:28px;border-radius:50%;padding:0}
+input[type=color]::-webkit-color-swatch-wrapper{padding:0}
+input[type=color]::-webkit-color-swatch{border:none;border-radius:50%}
+
+/* ── iframe ── */
+iframe{border:none;display:block}
+
+/* ── Transitions ── */
+.transition-all{transition:all .18s cubic-bezier(.4,0,.2,1)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" data-presets="react">
+
+const { useState, useEffect, useCallback, useRef, useMemo } = React;
+
+/* ══════════════════════════════════════════════════════
+   CONSTANTS & DATA
+══════════════════════════════════════════════════════ */
+
+const ACCENT_PRESETS = [
+  { color:'#c8f135', name:'Lima' },
+  { color:'#58a6ff', name:'Azul' },
+  { color:'#f97316', name:'Laranja' },
+  { color:'#a78bfa', name:'Roxo' },
+  { color:'#34d399', name:'Verde' },
+  { color:'#f472b6', name:'Rosa' },
+  { color:'#fbbf24', name:'Âmbar' },
+  { color:'#00ffff', name:'Cyan' },
+  { color:'#ff6b6b', name:'Coral' },
+  { color:'#e879f9', name:'Fúcsia' },
+];
+
+const FONT_OPTIONS = [
+  { id:'dm',        label:'DM Sans',        stack:"'DM Sans',sans-serif",       url:"https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap" },
+  { id:'syne',      label:'Syne',           stack:"'Syne',sans-serif",           url:"https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&display=swap" },
+  { id:'playfair',  label:'Playfair',        stack:"'Playfair Display',serif",    url:"https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&display=swap" },
+  { id:'mono',      label:'Space Mono',      stack:"'Space Mono',monospace",      url:"https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" },
+  { id:'poppins',   label:'Poppins',         stack:"'Poppins',sans-serif",        url:"https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;700&display=swap" },
+  { id:'cabinet',   label:'Cabinet',         stack:"'Cabinet Grotesk',sans-serif",url:"https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800&display=swap" },
+];
+
+const TEMPLATE_OPTIONS = [
+  { id:'minimal',    label:'Minimalista',   desc:'Clean, tipográfico, editorial' },
+  { id:'dark',       label:'Dark Studio',   desc:'Escuro, profissional, moderno' },
+  { id:'futuristic', label:'Cyberpunk',     desc:'Neon, futurista, tech' },
+  { id:'creative',   label:'Criativo',      desc:'Colorido, arrojado, assimétrico' },
+  { id:'glassmorphism', label:'Glass',      desc:'Glassmorphism, gradientes suaves' },
+];
+
+const TECH_DATA = {
+  'JavaScript':  { emoji:'⚡', color:'#f7df1e' },
+  'TypeScript':  { emoji:'🔷', color:'#3178c6' },
+  'React':       { emoji:'⚛',  color:'#61dafb' },
+  'Vue':         { emoji:'💚', color:'#42b883' },
+  'Angular':     { emoji:'🅰',  color:'#dd1b16' },
+  'Svelte':      { emoji:'🔥', color:'#ff3e00' },
+  'Next.js':     { emoji:'▲',  color:'#ffffff' },
+  'Nuxt':        { emoji:'💚', color:'#00dc82' },
+  'Node.js':     { emoji:'🟢', color:'#339933' },
+  'Python':      { emoji:'🐍', color:'#3776ab' },
+  'Django':      { emoji:'🎸', color:'#0c4b33' },
+  'FastAPI':     { emoji:'⚡', color:'#009688' },
+  'PHP':         { emoji:'🐘', color:'#8892be' },
+  'Laravel':     { emoji:'🔺', color:'#ff2d20' },
+  'Ruby':        { emoji:'💎', color:'#cc342d' },
+  'Go':          { emoji:'🐹', color:'#00add8' },
+  'Rust':        { emoji:'🦀', color:'#ce412b' },
+  'Java':        { emoji:'☕', color:'#f89820' },
+  'Kotlin':      { emoji:'🎯', color:'#7f52ff' },
+  'Swift':       { emoji:'🍎', color:'#fa7343' },
+  'C#':          { emoji:'#',  color:'#68217a' },
+  'C++':         { emoji:'⚙',  color:'#00599c' },
+  'Docker':      { emoji:'🐳', color:'#2496ed' },
+  'Kubernetes':  { emoji:'☸',  color:'#326ce5' },
+  'AWS':         { emoji:'☁',  color:'#ff9900' },
+  'GCP':         { emoji:'🌐', color:'#4285f4' },
+  'Azure':       { emoji:'🔷', color:'#0089d6' },
+  'Firebase':    { emoji:'🔥', color:'#ffca28' },
+  'GraphQL':     { emoji:'◈',  color:'#e10098' },
+  'MongoDB':     { emoji:'🍃', color:'#47a248' },
+  'PostgreSQL':  { emoji:'🐘', color:'#336791' },
+  'MySQL':       { emoji:'🐬', color:'#4479a1' },
+  'Redis':       { emoji:'⚡', color:'#dc382d' },
+  'Git':         { emoji:'🌿', color:'#f05032' },
+  'Linux':       { emoji:'🐧', color:'#fcc624' },
+  'HTML':        { emoji:'🏗',  color:'#e34f26' },
+  'CSS':         { emoji:'🎨', color:'#1572b6' },
+  'Sass':        { emoji:'💅', color:'#cc6699' },
+  'Tailwind':    { emoji:'💨', color:'#38bdf8' },
+  'Figma':       { emoji:'🎯', color:'#f24e1e' },
+  'Flutter':     { emoji:'🐦', color:'#54c5f8' },
+  'React Native':{ emoji:'📱', color:'#61dafb' },
+  'Electron':    { emoji:'⚛',  color:'#47848f' },
+  'Prisma':      { emoji:'◆',  color:'#2d3748' },
+  'Supabase':    { emoji:'🟢', color:'#3ecf8e' },
+  'Stripe':      { emoji:'💳', color:'#6772e5' },
+};
+
+const SOCIAL_NETWORKS = [
+  { id:'github',    label:'GitHub',      placeholder:'https://github.com/usuario',       icon:'GH' },
+  { id:'linkedin',  label:'LinkedIn',    placeholder:'https://linkedin.com/in/usuario',  icon:'LI' },
+  { id:'twitter',   label:'Twitter / X', placeholder:'https://x.com/usuario',            icon:'TW' },
+  { id:'instagram', label:'Instagram',   placeholder:'https://instagram.com/usuario',    icon:'IG' },
+  { id:'youtube',   label:'YouTube',     placeholder:'https://youtube.com/@canal',       icon:'YT' },
+  { id:'twitch',    label:'Twitch',      placeholder:'https://twitch.tv/usuario',        icon:'TV' },
+  { id:'discord',   label:'Discord',     placeholder:'discord.gg/convite',               icon:'DC' },
+  { id:'telegram',  label:'Telegram',    placeholder:'https://t.me/usuario',             icon:'TG' },
+  { id:'whatsapp',  label:'WhatsApp',    placeholder:'https://wa.me/5511...',            icon:'WA' },
+  { id:'behance',   label:'Behance',     placeholder:'https://behance.net/usuario',      icon:'BE' },
+  { id:'dribbble',  label:'Dribbble',    placeholder:'https://dribbble.com/usuario',     icon:'DR' },
+  { id:'medium',    label:'Medium',      placeholder:'https://medium.com/@usuario',      icon:'MD' },
+  { id:'devto',     label:'Dev.to',      placeholder:'https://dev.to/usuario',           icon:'DV' },
+  { id:'website',   label:'Website',     placeholder:'https://meusite.com',              icon:'🌐' },
+  { id:'email',     label:'E-mail',      placeholder:'seu@email.com',                    icon:'@' },
+];
+
+const SVG_ICONS = {
+  github: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.7-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2 0-.4-.5-1.6.2-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17 4.7 18 5 18 5c.7 1.6.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.5.4.9 1.2.9 2.3v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3"/></svg>`,
+  linkedin: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 2h-17A1.5 1.5 0 0 0 2 3.5v17A1.5 1.5 0 0 0 3.5 22h17a1.5 1.5 0 0 0 1.5-1.5v-17A1.5 1.5 0 0 0 20.5 2zM8 19H5v-9h3zM6.5 8.25A1.75 1.75 0 1 1 8.3 6.5a1.78 1.78 0 0 1-1.8 1.75zM19 19h-3v-4.74c0-1.42-.6-1.93-1.38-1.93A1.74 1.74 0 0 0 13 14.19V19h-3v-9h2.9v1.3a3.11 3.11 0 0 1 2.7-1.4c1.55 0 3.36.86 3.36 3.66z"/></svg>`,
+  twitter: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`,
+  instagram: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z"/></svg>`,
+  youtube: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.495 6.205a3.007 3.007 0 0 0-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 0 0 .527 6.205a31.247 31.247 0 0 0-.522 5.805 31.247 31.247 0 0 0 .522 5.783 3.007 3.007 0 0 0 2.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 0 0 2.088-2.088 31.247 31.247 0 0 0 .5-5.783 31.247 31.247 0 0 0-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>`,
+  website: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`,
+  email: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>`,
+  discord: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03z"/></svg>`,
+  telegram: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.244-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/></svg>`,
+  whatsapp: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>`,
+  twitch: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714z"/></svg>`,
+  behance: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M22 7h-7V5h7v2zm1.726 10c-.442 1.297-2.029 3-5.101 3-3.074 0-5.564-1.729-5.564-5.675 0-3.91 2.325-5.92 5.466-5.92 3.082 0 4.964 1.782 5.375 4.426.078.506.109 1.188.095 2.14H15.97c.13 3.211 3.483 3.312 4.588 2.029H23zm-7.27-4h4.888c-.088-1.372-.53-2.634-2.24-2.634-1.602 0-2.527 1.026-2.648 2.634zM1.5 7.5h5.196c1.467 0 2.804.463 2.804 2.196 0 .957-.362 1.589-.96 1.977.923.376 1.46 1.182 1.46 2.327 0 2.196-1.747 3-3.833 3H1.5V7.5zm2.5 5v2.5H5.5c.69 0 1.25-.56 1.25-1.25S6.19 12.5 5.5 12.5H4zm0-3v2h1c.56 0 1-.448 1-1s-.44-1-1-1H4z"/></svg>`,
+  dribbble: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 24C5.385 24 0 18.615 0 12S5.385 0 12 0s12 5.385 12 12-5.385 12-12 12zm10.12-10.358c-.35-.11-3.17-.953-6.384-.438 1.34 3.684 1.887 6.684 1.992 7.308 2.3-1.555 3.936-4.02 4.395-6.87zm-6.115 7.808c-.153-.9-.75-4.032-2.19-7.77l-.066.02c-5.79 2.015-7.86 6.025-8.048 6.4 1.73 1.358 3.92 2.166 6.298 2.166 1.42 0 2.77-.29 4.006-.814zm-9.878-2.58c.24-.43 3.024-5.207 8.332-6.855.137-.042.277-.08.418-.116-.168-.38-.345-.76-.53-1.137-5.16 1.545-10.165 1.48-10.623 1.47l-.003.244c0 2.96 1.12 5.666 2.963 7.705l-.557-1.31zm-2.43-8.55c.47.01 4.956.022 9.804-1.298-.7-1.245-1.44-2.43-2.213-3.54-2.47 1.192-4.387 3.25-5.31 5.762l-2.28.075zm7.52-5.73c.79 1.126 1.548 2.325 2.245 3.582 2.132-.8 4.048-2.025 5.528-3.625A10.153 10.153 0 0 0 12 1.913c-1.02 0-2 .148-2.926.425l.142.003zm8.17 2.3c-1.602 1.74-3.665 3.095-5.973 3.965.183.38.356.764.515 1.152 2.265-.29 4.554.13 5.96.54l-.016-.044a10.1 10.1 0 0 0-.486-5.613z"/></svg>`,
+  medium: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.54 12a6.8 6.8 0 01-6.77 6.82A6.8 6.8 0 010 12a6.8 6.8 0 016.77-6.82A6.8 6.8 0 0113.54 12zM20.96 12c0 3.54-1.51 6.42-3.38 6.42-1.87 0-3.39-2.88-3.39-6.42s1.52-6.42 3.39-6.42 3.38 2.88 3.38 6.42M24 12c0 3.17-.53 5.75-1.19 5.75-.66 0-1.19-2.58-1.19-5.75s.53-5.75 1.19-5.75C23.47 6.25 24 8.83 24 12z"/></svg>`,
+  devto: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7.42 10.05c-.18-.16-.46-.23-.84-.23H6l.02 2.44.04 2.45.56-.02c.41 0 .63-.07.83-.26.24-.24.26-.36.26-2.2 0-1.91-.02-1.96-.29-2.18zM0 4.94v14.12h24V4.94H0zM8.56 15.3c-.44.58-1.06.77-2.53.77H4.71V8.53h1.4c1.67 0 2.16.18 2.6.9.27.43.29.6.32 2.57.05 2.23-.02 2.73-.47 3.3zm5.09-5.47h-2.47v1.77h1.52v1.28l-.72.04-.75.03v1.77l1.22.03 1.2.04v1.28h-1.6c-1.53 0-1.6-.01-1.87-.3l-.3-.28v-3.16c0-3.02.01-3.18.25-3.48.23-.31.25-.31 1.88-.31h1.64v1.3zm4.68 5.45c-.17.43-.64.79-1 .79-.18 0-.45-.15-.67-.39-.32-.32-.45-.63-.82-2.08l-.9-3.39-.45-1.67h.76c.4 0 .75.02.75.05 0 .06 1.16 4.54 1.26 4.83.04.15.32-.7.73-2.3l.66-2.52.74-.04c.4-.02.73 0 .73.04 0 .14-1.67 6.38-1.8 6.68z"/></svg>`,
+};
+
+/* ══════════════════════════════════════════════════════
+   INITIAL STATE
+══════════════════════════════════════════════════════ */
+const initialData = {
+  template: 'minimal',
+  accentColor: '#c8f135',
+  font: 'dm',
+  heroLayout: 'side',
+  photoShape: 'circle',
+  name: '', title: '', tagline: '', bio: '',
+  location: '', yearsExp: '', availability: '',
+  photo: '',
+  technologies: [],
+  skills: [],
+  services: [],
+  projects: [],
+  experiences: [],
+  education: [],
+  certs: [],
+  social: {},
+  socialStyle: 'icon-text',
+  socialShape: 'rounded',
+  techDisplayStyle: 'badge',
+  projLayout: 'grid',
+  footerText: '',
+  metaDesc: '',
+  metaKeywords: '',
+  pageLang: 'pt-BR',
+  customCSS: '',
+  sections: {
+    tech: true, skills: true, projects: true, services: true,
+    experiences: true, education: true, certs: true, contact: true,
+    contactForm: false
+  }
+};
+
+/* ══════════════════════════════════════════════════════
+   UTILITY FUNCTIONS
+══════════════════════════════════════════════════════ */
+const uid = () => Math.random().toString(36).slice(2,9);
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
+const FONT_STACKS = {
+  dm:"'DM Sans',sans-serif", syne:"'Syne',sans-serif",
+  playfair:"'Playfair Display',serif", mono:"'Space Mono',monospace",
+  poppins:"'Poppins',sans-serif", cabinet:"'Cabinet Grotesk',sans-serif"
+};
+
+const FONT_URLS = {
+  dm:"https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&display=swap",
+  syne:"https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&display=swap",
+  playfair:"https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,400&display=swap",
+  mono:"https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap",
+  poppins:"https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;700&display=swap",
+  cabinet:"https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800&display=swap"
+};
+
+/* ══════════════════════════════════════════════════════
+   PORTFOLIO HTML GENERATOR
+══════════════════════════════════════════════════════ */
+function generatePortfolioHTML(data) {
+  const {
+    template, accentColor: accent, font, heroLayout, photoShape,
+    name, title, tagline, bio, location, yearsExp, availability,
+    photo, technologies, skills, services, projects, experiences,
+    education, certs, social, socialStyle, socialShape,
+    techDisplayStyle, projLayout, footerText, metaDesc, metaKeywords,
+    pageLang, customCSS, sections
+  } = data;
+
+  const fontStack = FONT_STACKS[font] || FONT_STACKS.dm;
+  const fontUrl   = FONT_URLS[font]   || FONT_URLS.dm;
+  const displayName = name || 'Seu Nome';
+  const displayTitle = title || 'Título Profissional';
+  const displayBio = bio || 'Preencha sua bio no formulário.';
+
+  const shapeStyle = {
+    circle: 'border-radius:50%',
+    square: 'border-radius:12px',
+    hexagon: 'clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)',
+    blob: 'border-radius:60% 40% 30% 70% / 60% 30% 70% 40%',
+  }[photoShape] || 'border-radius:50%';
+
+  const photoEl = photo
+    ? `<img src="${esc(photo)}" alt="${esc(displayName)}" style="width:100%;height:100%;object-fit:cover;display:block"/>`
+    : `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:2.5em;opacity:.3">◉</div>`;
+
+  const availMap = {
+    open:{ text:'Disponível para projetos', color:'#4ade80' },
+    freelance:{ text:'Freelance apenas', color:'#facc15' },
+    fulltime:{ text:'Buscando emprego', color:'#60a5fa' },
+    busy:{ text:'Ocupado no momento', color:'#f87171' }
+  };
+
+  // ── Social Buttons ──
+  function socialBtns(fg, bg, borderColor) {
+    const radius = { rounded:'8px', pill:'100px', square:'2px' }[socialShape] || '8px';
+    return SOCIAL_NETWORKS.map(n => {
+      const val = social[n.id];
+      if (!val) return '';
+      const href = n.id === 'email' ? `mailto:${esc(val)}` : esc(val);
+      const iconSvg = SVG_ICONS[n.id] || SVG_ICONS.website;
+      const contentParts = [];
+      if (socialStyle !== 'text-only') contentParts.push(`<span style="width:16px;height:16px;display:inline-flex;flex-shrink:0">${iconSvg}</span>`);
+      if (socialStyle !== 'icon-only') contentParts.push(n.label);
+      return `<a href="${href}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:7px;text-decoration:none;padding:9px 16px;border-radius:${radius};font-size:13px;border:1px solid ${borderColor};background:${bg};color:${fg};transition:opacity .2s">${contentParts.join('')}</a>`;
+    }).join('');
+  }
+
+  // ── Tech Badges ──
+  function techBadges(accent, cardBg, textCol) {
+    if (!technologies.length) return '<p style="opacity:.4">Adicione tecnologias</p>';
+    if (techDisplayStyle === 'card') {
+      return `<div style="display:flex;flex-wrap:wrap;gap:12px">${technologies.map(t => {
+        const info = TECH_DATA[t] || {};
+        return `<div style="display:flex;flex-direction:column;align-items:center;gap:6px;background:${cardBg};border:1px solid ${accent}22;padding:16px 14px;border-radius:12px;min-width:72px;text-align:center">
+          <span style="font-size:26px">${info.emoji||'⚡'}</span>
+          <span style="font-size:11px;font-weight:500">${esc(t)}</span>
+        </div>`;
+      }).join('')}</div>`;
+    }
+    if (techDisplayStyle === 'icon') {
+      return `<div style="display:flex;flex-wrap:wrap;gap:8px">${technologies.map(t => {
+        const info = TECH_DATA[t] || {};
+        return `<span style="display:inline-flex;align-items:center;gap:7px;background:${cardBg};border:1px solid ${accent}22;padding:7px 14px;border-radius:8px;font-size:13px">
+          <span style="font-size:18px">${info.emoji||'⚡'}</span>${esc(t)}
+        </span>`;
+      }).join('')}</div>`;
+    }
+    return `<div style="display:flex;flex-wrap:wrap;gap:7px">${technologies.map(t => {
+      const info = TECH_DATA[t] || {};
+      return `<span style="display:inline-flex;align-items:center;gap:5px;background:${cardBg};border:1px solid ${accent}33;padding:5px 13px;border-radius:100px;font-size:12.5px">
+        ${info.emoji ? `<span>${info.emoji}</span>` : ''}${esc(t)}
+      </span>`;
+    }).join('')}</div>`;
+  }
+
+  // ── Skills Bars ──
+  function skillBars(accent) {
+    return skills.filter(s=>s.name).map(s=>`
+      <div style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;margin-bottom:6px;font-size:13px">
+          <span>${esc(s.name)}</span>
+          <span style="color:${accent};font-size:12px;font-weight:600">${s.level}%</span>
+        </div>
+        <div style="background:rgba(128,128,128,.15);border-radius:100px;height:5px">
+          <div style="background:${accent};width:${s.level}%;height:100%;border-radius:100px"></div>
+        </div>
+      </div>`).join('');
+  }
+
+  // ── Projects ──
+  function projCards(accent, cardBg, mutedCol) {
+    const list = projects.filter(p=>p.name);
+    if (!list.length) return '<p style="opacity:.4">Adicione projetos</p>';
+    const tagsHtml = tags => tags ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">${tags.split(',').map(t=>t.trim()).filter(Boolean).map(t=>`<span style="background:${accent}18;color:${accent};padding:2px 8px;border-radius:100px;font-size:10px;font-weight:500">${esc(t)}</span>`).join('')}</div>` : '';
+    if (projLayout === 'list') {
+      return list.map(p=>`
+        <div style="display:flex;gap:18px;background:${cardBg};border-radius:12px;padding:20px;margin-bottom:14px;border:1px solid rgba(128,128,128,.1)">
+          ${p.img ? `<img src="${esc(p.img)}" style="width:90px;height:68px;object-fit:cover;border-radius:8px;flex-shrink:0" alt="">` : ''}
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:5px">
+              <strong style="font-size:15px">${esc(p.name)}</strong>
+              ${p.featured?`<span style="background:${accent}22;color:${accent};padding:2px 8px;border-radius:100px;font-size:10px;font-weight:600">⭐ Destaque</span>`:''}
+              ${p.type?`<span style="opacity:.45;font-size:11px">${esc(p.type)}</span>`:''}
+            </div>
+            <p style="font-size:13px;opacity:.65;line-height:1.6;margin-bottom:8px">${esc(p.desc)}</p>
+            ${tagsHtml(p.tags)}
+            <div style="display:flex;gap:12px;margin-top:10px">
+              ${p.link?`<a href="${esc(p.link)}" target="_blank" style="color:${accent};font-size:12px;font-weight:600;text-decoration:none">Demo ↗</a>`:''}
+              ${p.repo?`<a href="${esc(p.repo)}" target="_blank" style="color:${mutedCol};font-size:12px;text-decoration:none">Código ↗</a>`:''}
+            </div>
+          </div>
+        </div>`).join('');
+    }
+    const featured = list.filter(p=>p.featured);
+    const rest = projLayout === 'featured' ? list.filter(p=>!p.featured) : list;
+    const featuredHtml = featured.length && projLayout === 'featured' ? featured.map(p=>`
+      <div style="background:${cardBg};border-radius:14px;overflow:hidden;margin-bottom:18px;border:1px solid ${accent}33">
+        ${p.img?`<img src="${esc(p.img)}" style="width:100%;height:220px;object-fit:cover;display:block" alt="">`:``}
+        <div style="padding:22px">
+          <span style="background:${accent}22;color:${accent};padding:3px 10px;border-radius:100px;font-size:11px;font-weight:600">⭐ Destaque</span>
+          <h3 style="font-size:20px;font-weight:700;margin:10px 0 8px">${esc(p.name)}</h3>
+          <p style="font-size:14px;opacity:.7;line-height:1.7;margin-bottom:12px">${esc(p.desc)}</p>
+          ${tagsHtml(p.tags)}
+          <div style="display:flex;gap:12px;margin-top:16px">
+            ${p.link?`<a href="${esc(p.link)}" target="_blank" style="background:${accent};color:#000;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:700">Ver demo ↗</a>`:''}
+            ${p.repo?`<a href="${esc(p.repo)}" target="_blank" style="border:1px solid ${accent}55;color:${accent};padding:10px 20px;border-radius:8px;text-decoration:none;font-size:13px">Ver código ↗</a>`:''}
+          </div>
+        </div>
+      </div>`).join('') : '';
+    const gridItems = rest.map(p=>`
+      <div style="background:${cardBg};border-radius:12px;overflow:hidden;border:1px solid rgba(128,128,128,.1)">
+        ${p.img?`<img src="${esc(p.img)}" style="width:100%;height:150px;object-fit:cover;display:block" alt="">`:``}
+        <div style="padding:18px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+            <h3 style="font-size:14px;font-weight:600">${esc(p.name)}</h3>
+            ${p.featured?`<span style="color:${accent}">⭐</span>`:''}
+          </div>
+          ${p.type?`<p style="font-size:11px;opacity:.45;margin-bottom:6px">${esc(p.type)}</p>`:''}
+          <p style="font-size:12.5px;opacity:.65;line-height:1.6;margin-bottom:10px">${esc(p.desc)}</p>
+          ${tagsHtml(p.tags)}
+          <div style="display:flex;gap:10px;margin-top:10px">
+            ${p.link?`<a href="${esc(p.link)}" target="_blank" style="color:${accent};font-size:12px;font-weight:600;text-decoration:none">Demo ↗</a>`:''}
+            ${p.repo?`<a href="${esc(p.repo)}" target="_blank" style="opacity:.5;font-size:12px;text-decoration:none">Código ↗</a>`:''}
+          </div>
+        </div>
+      </div>`).join('');
+    return `${featuredHtml}<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px">${gridItems}</div>`;
+  }
+
+  // ── Experience ──
+  function expTimeline(accent, cardBg) {
+    return experiences.filter(e=>e.role||e.company).map(e=>`
+      <div style="display:flex;gap:16px;margin-bottom:22px;padding-bottom:22px;border-bottom:1px solid rgba(128,128,128,.1)">
+        <div style="flex-shrink:0">
+          ${e.logo ? `<img src="${esc(e.logo)}" style="width:42px;height:42px;border-radius:9px;object-fit:contain;border:1px solid rgba(128,128,128,.15);background:${cardBg}" alt="">` :
+            `<div style="width:42px;height:42px;border-radius:9px;background:${accent}18;display:flex;align-items:center;justify-content:center;color:${accent};font-size:18px">💼</div>`}
+        </div>
+        <div style="flex:1">
+          <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:4px;margin-bottom:3px">
+            <strong style="font-size:14px">${esc(e.role)}</strong>
+            <span style="font-size:12px;opacity:.45">${esc(e.start)}${e.end?' — '+esc(e.end):''}</span>
+          </div>
+          <div style="color:${accent};font-size:13px;font-weight:500;margin-bottom:6px">${esc(e.company)}</div>
+          ${e.desc?`<p style="font-size:13px;opacity:.65;line-height:1.65">${esc(e.desc)}</p>`:''}
+        </div>
+      </div>`).join('');
+  }
+
+  // ── Education ──
+  function eduList(accent) {
+    return education.filter(e=>e.course||e.institution).map(e=>`
+      <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid rgba(128,128,128,.08)">
+        <div style="width:38px;height:38px;border-radius:8px;background:${accent}18;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:17px">🎓</div>
+        <div>
+          <div style="font-size:14px;font-weight:600">${esc(e.course)}</div>
+          <div style="color:${accent};font-size:13px;margin-top:2px">${esc(e.institution)}</div>
+          ${(e.start||e.end)?`<div style="font-size:12px;opacity:.4;margin-top:2px">${esc(e.start)}${e.end?' — '+esc(e.end):''}</div>`:''}
+        </div>
+      </div>`).join('');
+  }
+
+  // ── Certs ──
+  function certBadges(accent) {
+    return `<div style="display:flex;flex-wrap:wrap;gap:10px">${certs.filter(c=>c.name).map(c=>`
+      <div style="border:1px solid ${accent}33;border-radius:10px;padding:12px 16px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">🏆</span>
+        <div>
+          <div style="font-size:13px;font-weight:600">${esc(c.name)}</div>
+          <div style="font-size:11px;opacity:.45">${esc(c.issuer)}${c.year?' · '+esc(c.year):''}</div>
+        </div>
+        ${c.link?`<a href="${esc(c.link)}" target="_blank" style="color:${accent};font-size:11px;text-decoration:none;margin-left:auto">Ver ↗</a>`:''}
+      </div>`).join('')}</div>`;
+  }
+
+  // ── Services ──
+  function serviceCards(accent, cardBg) {
+    return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px">${services.filter(s=>s.name).map(s=>`
+      <div style="background:${cardBg};border-radius:12px;padding:22px;border:1px solid rgba(128,128,128,.1)">
+        ${s.icon?`<div style="font-size:32px;margin-bottom:12px">${esc(s.icon)}</div>`:''}
+        <h3 style="font-size:14px;font-weight:600;margin-bottom:7px">${esc(s.name)}</h3>
+        <p style="font-size:12.5px;opacity:.6;line-height:1.65">${esc(s.desc)}</p>
+      </div>`).join('')}</div>`;
+  }
+
+  // ── Contact Form ──
+  function contactForm(accent, cardBg, textCol) {
+    return `<div style="background:${cardBg};border-radius:14px;padding:26px;max-width:460px;margin-top:20px">
+      <h3 style="font-size:16px;font-weight:600;margin-bottom:18px">Envie uma mensagem</h3>
+      ${['Nome','E-mail'].map(l=>`<div style="margin-bottom:14px"><label style="font-size:11px;opacity:.5;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">${l}</label><div style="background:rgba(128,128,128,.08);border:1px solid rgba(128,128,128,.15);border-radius:7px;padding:10px 12px;font-size:14px;opacity:.4;color:${textCol}">...</div></div>`).join('')}
+      <div style="margin-bottom:16px"><label style="font-size:11px;opacity:.5;display:block;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px">Mensagem</label><div style="background:rgba(128,128,128,.08);border:1px solid rgba(128,128,128,.15);border-radius:7px;padding:10px 12px;height:80px;opacity:.4;color:${textCol}"></div></div>
+      <div style="background:${accent};color:#000;padding:11px;border-radius:7px;text-align:center;font-size:13px;font-weight:700">Enviar Mensagem</div>
+    </div>`;
+  }
+
+  // ── Availability Badge ──
+  function availBadge(color) {
+    if (!availability || !availMap[availability]) return '';
+    const info = availMap[availability];
+    return `<div style="display:inline-flex;align-items:center;gap:7px;font-size:13px;color:${color||info.color}">
+      <span style="width:8px;height:8px;border-radius:50%;background:${info.color};display:inline-block"></span>
+      ${info.text}
+    </div>`;
+  }
+
+  /* ════ TEMPLATE BUILDERS ════ */
+
+  // ─── Minimal ───
+  if (template === 'minimal') {
+    const bg='#fff', text='#111', muted='#666', border='#e8e3df', surface='#f8f6f3';
+    function sec(show, title, body) {
+      if (!show) return '';
+      return `<section style="padding:60px 0;border-bottom:1px solid ${border}">
+        <div style="max-width:840px;margin:0 auto;padding:0 28px">
+          <h2 style="font-size:24px;font-weight:700;margin-bottom:26px;padding-bottom:12px;border-bottom:1px solid ${border}">${title}</h2>
+          ${body}
+        </div>
+      </section>`;
+    }
+    const heroContent = heroLayout === 'center' ? `
+      <div style="text-align:center">
+        <div style="width:130px;height:130px;margin:0 auto 22px;overflow:hidden;${shapeStyle};border:3px solid ${border}">${photoEl}</div>
+        <p style="font-size:12px;letter-spacing:3px;text-transform:uppercase;color:${muted};margin-bottom:10px">${esc(displayTitle)}</p>
+        <h1 style="font-size:clamp(30px,5vw,54px);line-height:1.15;font-weight:700;margin-bottom:14px">${esc(displayName)}</h1>
+        ${tagline?`<p style="font-style:italic;color:${muted};font-size:15px;margin-bottom:14px">"${esc(tagline)}"</p>`:''}
+        <p style="font-size:15px;color:${muted};max-width:520px;margin:0 auto 16px;line-height:1.8">${esc(displayBio)}</p>
+        <div style="display:flex;justify-content:center;gap:18px;font-size:13px;color:${muted};margin-bottom:12px">
+          ${location?`<span>📍 ${esc(location)}</span>`:''}${yearsExp?`<span>⏱ ${esc(yearsExp)} anos exp.</span>`:''}
+        </div>
+        ${availBadge(accent)}
+      </div>` : heroLayout === 'banner' ? `
+      <div style="display:flex;align-items:center;gap:36px;flex-wrap:wrap">
+        <div style="width:100px;height:100px;overflow:hidden;${shapeStyle};border:3px solid ${border};flex-shrink:0">${photoEl}</div>
+        <div>
+          <p style="color:${accent};font-size:15px;margin-bottom:6px">${esc(displayTitle)}</p>
+          <h1 style="font-size:clamp(26px,4vw,48px);font-weight:700;margin-bottom:8px">${esc(displayName)}</h1>
+          <p style="color:${muted};font-size:14px;max-width:500px">${esc(displayBio)}</p>
+          <div style="margin-top:10px">${availBadge(accent)}</div>
+        </div>
+      </div>` : `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:40px;flex-wrap:wrap">
+        <div style="flex:1;min-width:260px">
+          <p style="font-size:12px;letter-spacing:3px;text-transform:uppercase;color:${muted};margin-bottom:10px">${esc(displayTitle)}</p>
+          <h1 style="font-size:clamp(28px,5vw,56px);line-height:1.12;font-weight:700;margin-bottom:14px">${esc(displayName)}</h1>
+          ${tagline?`<p style="font-style:italic;color:${accent};font-size:14px;margin-bottom:12px">"${esc(tagline)}"</p>`:''}
+          <p style="font-size:15px;color:${muted};max-width:460px;line-height:1.8;margin-bottom:14px">${esc(displayBio)}</p>
+          <div style="display:flex;flex-wrap:wrap;gap:16px;font-size:13px;color:${muted};margin-bottom:12px">
+            ${location?`<span>📍 ${esc(location)}</span>`:''}${yearsExp?`<span>⏱ ${esc(yearsExp)} anos de exp.</span>`:''}
+          </div>
+          ${availBadge(accent)}
+        </div>
+        <div style="width:170px;height:170px;overflow:hidden;${shapeStyle};border:3px solid ${border};flex-shrink:0">${photoEl}</div>
+      </div>`;
+
+    return `<!DOCTYPE html><html lang="${esc(pageLang)}"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="${esc(metaDesc||'Portfolio de '+displayName)}">
+<meta name="keywords" content="${esc(metaKeywords)}">
+<title>${esc(displayName)} — Portfolio</title>
+<link href="${fontUrl}" rel="stylesheet"/>
+<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:${fontStack};background:${bg};color:${text};line-height:1.7;font-size:15px}a{color:inherit;transition:opacity .2s}a:hover{opacity:.7}img{max-width:100%}@media(max-width:600px){.hero-wrap{flex-direction:column!important;text-align:center!important}.photo-wrap-side{margin:0 auto!important}}</style>
+${customCSS?`<style>${customCSS}</style>`:''}
+</head><body>
+<nav style="padding:16px 0;border-bottom:1px solid ${border};position:sticky;top:0;background:rgba(255,255,255,.95);backdrop-filter:blur(8px);z-index:10">
+  <div style="max-width:840px;margin:0 auto;padding:0 28px;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-weight:700;font-size:15px">${esc(displayName)}</span>
+    <div style="display:flex;gap:20px;font-size:13px;color:${muted}">
+      ${sections.projects?`<a href="#projects" style="text-decoration:none;color:${muted}">Projetos</a>`:''}
+      ${sections.contact?`<a href="#contact" style="text-decoration:none;color:${muted}">Contato</a>`:''}
+    </div>
+  </div>
+</nav>
+<section style="padding:${heroLayout==='banner'?'60px':'80px'} 0 ${heroLayout==='banner'?'60px':'60px'};border-bottom:1px solid ${border};background:${heroLayout==='banner'?surface:bg}">
+  <div style="max-width:840px;margin:0 auto;padding:0 28px">${heroContent}</div>
+</section>
+${sec(sections.tech,'Tecnologias',techBadges(accent,surface,text))}
+${sec(sections.skills&&skills.some(s=>s.name),'Habilidades',`<div style="max-width:480px">${skillBars(accent)}</div>`)}
+${sec(sections.services&&services.some(s=>s.name),'Serviços',serviceCards(accent,surface))}
+<div id="projects">${sec(sections.projects,'Projetos',projCards(accent,surface,muted))}</div>
+${sec(sections.experiences&&experiences.some(e=>e.role),'Experiência',expTimeline(accent,surface))}
+${sec(sections.education&&education.some(e=>e.course),'Educação',eduList(accent))}
+${sec(sections.certs&&certs.some(c=>c.name),'Certificados',certBadges(accent))}
+<div id="contact">${sec(sections.contact,'Contato',`<div style="display:flex;flex-wrap:wrap;gap:10px">${socialBtns(text,surface,'#e0dbd6')}</div>${sections.contactForm?contactForm(accent,surface,text):''}`)}</div>
+<footer style="border-top:1px solid ${border};padding:24px 0;text-align:center">
+  <div style="max-width:840px;margin:0 auto;padding:0 28px">
+    <p style="font-size:13px;color:${muted}">${esc(footerText||`Portfolio de ${displayName}`)}</p>
+  </div>
+</footer>
+</body></html>`;
+  }
+
+  // ─── Dark Studio ───
+  if (template === 'dark') {
+    const bg='#0d1117', text='#e6edf3', muted='#8b949e', border='#30363d', surface='#161b22';
+    function sec(show, title, body) {
+      if (!show) return '';
+      return `<section style="padding:60px 0;border-top:1px solid ${border}">
+        <div style="max-width:860px;margin:0 auto;padding:0 28px">
+          <h2 style="font-size:19px;font-weight:700;margin-bottom:24px;display:flex;align-items:center;gap:10px">
+            <span style="color:${accent};font-size:12px;font-family:'Space Mono',monospace;opacity:.7">//</span> ${title}
+          </h2>${body}
+        </div>
+      </section>`;
+    }
+    const heroContent = `<div style="display:flex;align-items:center;gap:36px;flex-wrap:wrap;${heroLayout==='center'?'flex-direction:column;text-align:center':''}">
+      <div style="width:${heroLayout==='center'?'120px':'96px'};height:${heroLayout==='center'?'120px':'96px'};overflow:hidden;${shapeStyle};border:2px solid ${border};flex-shrink:0;${heroLayout==='center'?'':''}position:relative">${photoEl}</div>
+      <div style="flex:1;min-width:0">
+        <div style="display:inline-flex;align-items:center;gap:6px;border:1px solid ${accent}44;background:${accent}10;padding:4px 12px;border-radius:100px;font-size:12px;color:${accent};margin-bottom:14px">${esc(displayTitle)}</div>
+        <h1 style="font-size:clamp(24px,4vw,46px);font-weight:800;line-height:1.14;margin-bottom:12px">${esc(displayName)}</h1>
+        ${tagline?`<p style="color:${accent};opacity:.7;font-size:14px;margin-bottom:10px">${esc(tagline)}</p>`:''}
+        <p style="color:${muted};font-size:14px;line-height:1.8;max-width:490px;margin-bottom:14px">${esc(displayBio)}</p>
+        <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:${muted};margin-bottom:12px">
+          ${location?`<span>📍 ${esc(location)}</span>`:''}${yearsExp?`<span>⏱ ${esc(yearsExp)} anos exp.</span>`:''}
+        </div>
+        ${availBadge(accent)}
+      </div>
+    </div>`;
+    return `<!DOCTYPE html><html lang="${esc(pageLang)}"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="${esc(metaDesc||'Portfolio de '+displayName)}">
+<title>${esc(displayName)} — Portfolio</title>
+<link href="${fontUrl}" rel="stylesheet"/>
+<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:${fontStack};background:${bg};color:${text};line-height:1.7;font-size:15px}a{color:inherit;transition:opacity .2s}a:hover{opacity:.7}img{max-width:100%}</style>
+${customCSS?`<style>${customCSS}</style>`:''}
+</head><body>
+<header style="padding:14px 0;border-bottom:1px solid ${border};position:sticky;top:0;background:rgba(13,17,23,.92);backdrop-filter:blur(10px);z-index:10">
+  <div style="max-width:860px;margin:0 auto;padding:0 28px;display:flex;align-items:center;justify-content:space-between">
+    <span style="font-family:'Space Mono',monospace;font-size:13px;color:${accent}">// ${esc(displayName.toLowerCase().replace(/\s+/g,'_'))}</span>
+    <div style="display:flex;gap:18px;font-size:12px;color:${muted}">
+      ${sections.projects?`<a href="#projects" style="text-decoration:none;color:${muted}">projetos</a>`:''}
+      ${sections.contact?`<a href="#contact" style="text-decoration:none;color:${muted}">contato</a>`:''}
+    </div>
+  </div>
+</header>
+<section style="padding:72px 0 60px;border-bottom:1px solid ${border}">
+  <div style="max-width:860px;margin:0 auto;padding:0 28px">${heroContent}</div>
+</section>
+${sec(sections.tech,'Tech Stack',techBadges(accent,surface,text))}
+${sec(sections.skills&&skills.some(s=>s.name),'Habilidades',`<div style="max-width:500px">${skillBars(accent)}</div>`)}
+${sec(sections.services&&services.some(s=>s.name),'Serviços',serviceCards(accent,surface))}
+<div id="projects">${sec(sections.projects,'Projetos',projCards(accent,surface,muted))}</div>
+${sec(sections.experiences&&experiences.some(e=>e.role),'Experiência',expTimeline(accent,surface))}
+${sec(sections.education&&education.some(e=>e.course),'Educação',eduList(accent))}
+${sec(sections.certs&&certs.some(c=>c.name),'Certificados',certBadges(accent))}
+<div id="contact">${sec(sections.contact,'Contato',`<div style="display:flex;flex-wrap:wrap;gap:10px">${socialBtns(text,surface,border)}</div>${sections.contactForm?contactForm(accent,surface,text):''}`)}</div>
+<footer style="border-top:1px solid ${border};padding:22px 0;text-align:center">
+  <div style="max-width:860px;margin:0 auto;padding:0 28px">
+    <p style="font-size:12px;font-family:'Space Mono',monospace;color:${muted}">${esc(footerText||'// built with AutoPortfolio ◈')}</p>
+  </div>
+</footer>
+</body></html>`;
+  }
+
+  // ─── Cyberpunk ───
+  if (template === 'futuristic') {
+    const bg='#020209', text='#d0e8e0', muted='rgba(180,220,200,.4)', surface='#060614';
+    const gridCss = `body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(${accent}08 1px,transparent 1px),linear-gradient(90deg,${accent}08 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0}`;
+    function sec(show, title, body) {
+      if (!show) return '';
+      return `<section style="padding:56px 0;border-top:1px solid ${accent}18;position:relative;z-index:1">
+        <div style="max-width:860px;margin:0 auto;padding:0 28px">
+          <h2 style="font-size:11px;letter-spacing:5px;text-transform:uppercase;color:${accent};text-shadow:0 0 14px ${accent}88;margin-bottom:26px;display:flex;align-items:center;gap:10px">
+            <span style="opacity:.4">[ </span>${title}<span style="opacity:.4"> ]</span>
+            <div style="flex:1;height:1px;background:linear-gradient(90deg,${accent}44,transparent)"></div>
+          </h2>${body}
+        </div>
+      </section>`;
+    }
+    return `<!DOCTYPE html><html lang="${esc(pageLang)}"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="${esc(metaDesc||'Portfolio de '+displayName)}">
+<title>${esc(displayName)} — PORTFOLIO</title>
+<link href="${fontUrl}" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:${fontStack};background:${bg};color:${text};line-height:1.7;font-size:15px;position:relative}${gridCss}a{color:${accent};transition:opacity .2s}a:hover{opacity:.7}img{max-width:100%}</style>
+${customCSS?`<style>${customCSS}</style>`:''}
+</head><body>
+<header style="padding:14px 0;border-bottom:1px solid ${accent}22;position:sticky;top:0;background:rgba(2,2,9,.9);backdrop-filter:blur(8px);z-index:10">
+  <div style="max-width:860px;margin:0 auto;padding:0 28px;display:flex;align-items:center;justify-content:space-between;position:relative;z-index:1">
+    <span style="font-family:'Space Mono',monospace;font-size:12px;color:${accent};letter-spacing:3px;text-shadow:0 0 12px ${accent}">◈ PORTFOLIO</span>
+    <span style="font-size:10px;color:${muted};font-family:'Space Mono',monospace;letter-spacing:2px">SYS:ONLINE</span>
+  </div>
+</header>
+<section style="padding:72px 0 60px;border-bottom:1px solid ${accent}18;position:relative;z-index:1">
+  <div style="max-width:860px;margin:0 auto;padding:0 28px">
+    <div style="display:flex;align-items:center;gap:44px;flex-wrap:wrap">
+      <div style="width:110px;height:110px;overflow:hidden;${shapeStyle};border:1px solid ${accent}44;flex-shrink:0">${photoEl}</div>
+      <div>
+        <p style="font-size:10px;letter-spacing:5px;text-transform:uppercase;color:${muted};margin-bottom:12px;font-family:'Space Mono',monospace">&gt; dev.profile.load</p>
+        <h1 style="font-size:clamp(22px,4vw,44px);font-weight:700;letter-spacing:2px;text-transform:uppercase;line-height:1.15;margin-bottom:10px;text-shadow:0 0 24px ${accent}44">
+          <span style="color:${accent}">${esc(displayName)}</span><br>
+          <span style="font-size:.6em;opacity:.8">${esc(displayTitle)}</span>
+        </h1>
+        <p style="font-size:13px;opacity:.65;max-width:480px;line-height:1.8;margin-bottom:12px">${esc(displayBio)}</p>
+        <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:${muted};font-family:'Space Mono',monospace;margin-bottom:10px">
+          ${location?`<span>&gt; ${esc(location)}</span>`:''}${yearsExp?`<span>&gt; exp:${esc(yearsExp)}y</span>`:''}
+        </div>
+        ${availBadge(accent)}
+      </div>
+    </div>
+  </div>
+</section>
+${sec(sections.tech,'STACK',techBadges(accent,surface,text))}
+${sec(sections.skills&&skills.some(s=>s.name),'SKILLS',`<div style="max-width:500px">${skillBars(accent)}</div>`)}
+${sec(sections.services&&services.some(s=>s.name),'SERVIÇOS',serviceCards(accent,surface))}
+<div id="projects" style="position:relative;z-index:1">${sec(sections.projects,'PROJETOS',projCards(accent,surface,muted))}</div>
+${sec(sections.experiences&&experiences.some(e=>e.role),'EXPERIÊNCIA',expTimeline(accent,surface))}
+${sec(sections.education&&education.some(e=>e.course),'FORMAÇÃO',eduList(accent))}
+${sec(sections.certs&&certs.some(c=>c.name),'CERTS',certBadges(accent))}
+<div id="contact" style="position:relative;z-index:1">${sec(sections.contact,'CONTATO',`<div style="display:flex;flex-wrap:wrap;gap:10px">${socialBtns(text,surface,accent+'33')}</div>${sections.contactForm?contactForm(accent,surface,text):''}`)}</div>
+<footer style="border-top:1px solid ${accent}18;padding:22px 0;text-align:center;position:relative;z-index:1">
+  <p style="font-size:10px;font-family:'Space Mono',monospace;color:${muted};letter-spacing:3px">${esc(footerText||'// AUTOPORTFOLIO ◈ '+new Date().getFullYear())}</p>
+</footer>
+</body></html>`;
+  }
+
+  // ─── Creative ───
+  if (template === 'creative') {
+    const bg='#fafaf8', text='#1a1a1a', muted='#888', border='rgba(0,0,0,.08)', surface='#f0ede8';
+    const accentDark = accent;
+    function sec(show, title, body) {
+      if (!show) return '';
+      return `<section style="padding:64px 0">
+        <div style="max-width:900px;margin:0 auto;padding:0 32px">
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:30px">
+            <div style="width:8px;height:32px;background:${accentDark};border-radius:4px"></div>
+            <h2 style="font-size:26px;font-weight:800">${title}</h2>
+          </div>${body}
+        </div>
+      </section>`;
+    }
+    return `<!DOCTYPE html><html lang="${esc(pageLang)}"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(displayName)} — Portfolio</title>
+<link href="${fontUrl}" rel="stylesheet"/>
+<style>*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}body{font-family:${fontStack};background:${bg};color:${text};line-height:1.7;font-size:15px}a{color:inherit;transition:opacity .2s}a:hover{opacity:.7}img{max-width:100%}section:nth-child(even){background:${surface}}</style>
+${customCSS?`<style>${customCSS}</style>`:''}
+</head><body>
+<nav style="padding:18px 0;background:${bg};border-bottom:2px solid ${text};position:sticky;top:0;z-index:10">
+  <div style="max-width:900px;margin:0 auto;padding:0 32px;display:flex;justify-content:space-between;align-items:center">
+    <span style="font-weight:800;font-size:18px">${esc(displayName)}</span>
+    <div style="background:${accentDark};color:#000;padding:7px 18px;border-radius:100px;font-size:13px;font-weight:700">Hire me 🚀</div>
+  </div>
+</nav>
+<section style="padding:80px 0;background:${accentDark}">
+  <div style="max-width:900px;margin:0 auto;padding:0 32px">
+    <div style="display:flex;align-items:center;gap:48px;flex-wrap:wrap">
+      <div style="width:180px;height:180px;overflow:hidden;${shapeStyle};border:4px solid #000;flex-shrink:0">${photoEl}</div>
+      <div>
+        <p style="font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase;opacity:.7;margin-bottom:10px">${esc(displayTitle)}</p>
+        <h1 style="font-size:clamp(30px,5vw,58px);font-weight:800;line-height:1.1;margin-bottom:14px;color:#000">${esc(displayName)}</h1>
+        ${tagline?`<p style="font-size:15px;color:#000;opacity:.8;margin-bottom:14px">"${esc(tagline)}"</p>`:''}
+        <p style="font-size:15px;color:#000;opacity:.75;max-width:460px;line-height:1.7;margin-bottom:14px">${esc(displayBio)}</p>
+        <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:#000;opacity:.7;margin-bottom:12px">
+          ${location?`<span>📍 ${esc(location)}</span>`:''}${yearsExp?`<span>⏱ ${esc(yearsExp)} anos</span>`:''}
+        </div>
+        ${availBadge('#000')}
+      </div>
+    </div>
+  </div>
+</section>
+${sec(sections.tech,'Tecnologias',techBadges(accentDark,surface,text))}
+${sec(sections.skills&&skills.some(s=>s.name),'Habilidades',`<div style="max-width:480px">${skillBars(accentDark)}</div>`)}
+${sec(sections.services&&services.some(s=>s.name),'O que faço',serviceCards(accentDark,'#fff'))}
+<div id="projects">${sec(sections.projects,'Projetos',projCards(accentDark,'#fff',muted))}</div>
+${sec(sections.experiences&&experiences.some(e=>e.role),'Experiência',expTimeline(accentDark,'#fff'))}
+${sec(sections.education&&education.some(e=>e.course),'Educação',eduList(accentDark))}
+${sec(sections.certs&&certs.some(c=>c.name),'Certificados',certBadges(accentDark))}
+<div id="contact">${sec(sections.contact,'Contato',`<div style="display:flex;flex-wrap:wrap;gap:10px">${socialBtns(text,surface,'rgba(0,0,0,.15)')}</div>${sections.contactForm?contactForm(accentDark,surface,text):''}`)}</div>
+<footer style="background:${text};padding:28px 0;text-align:center">
+  <p style="font-size:13px;color:rgba(255,255,255,.4)">${esc(footerText||`Portfolio de ${displayName} · ${new Date().getFullYear()}`)}</p>
+</footer>
+</body></html>`;
+  }
+
+  // ─── Glass ───
+  const gbg = '#0f0f1a';
+  const gtext = '#e8e8f4';
+  const gmuted = 'rgba(200,200,240,.5)';
+  const gsurface = 'rgba(255,255,255,.04)';
+  const gborder = 'rgba(255,255,255,.08)';
+  function gsec(show, title, body) {
+    if (!show) return '';
+    return `<section style="padding:56px 0;border-top:1px solid ${gborder}">
+      <div style="max-width:860px;margin:0 auto;padding:0 28px">
+        <h2 style="font-size:21px;font-weight:700;margin-bottom:26px;background:linear-gradient(135deg,${gtext},${accent});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${title}</h2>
+        ${body}
+      </div>
+    </section>`;
+  }
+  const glassBg = `linear-gradient(135deg,#0f0f1a 0%,#1a0f2e 50%,#0f1a2e 100%)`;
+  return `<!DOCTYPE html><html lang="${esc(pageLang)}"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="${esc(metaDesc||'Portfolio de '+displayName)}">
+<title>${esc(displayName)} — Portfolio</title>
+<link href="${fontUrl}" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:${fontStack};background:${gbg};background-image:${glassBg};color:${gtext};line-height:1.7;font-size:15px;min-height:100vh}
+body::before{content:'';position:fixed;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,${accent}18,transparent 70%);top:-200px;right:-200px;pointer-events:none}
+body::after{content:'';position:fixed;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,${accent}10,transparent 70%);bottom:-100px;left:-100px;pointer-events:none}
+.glass{background:rgba(255,255,255,.05);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.1);border-radius:16px}
+a{color:inherit;transition:opacity .2s}a:hover{opacity:.7}img{max-width:100%}
+</style>
+${customCSS?`<style>${customCSS}</style>`:''}
+</head><body>
+<header style="padding:14px 0;background:rgba(15,15,26,.7);backdrop-filter:blur(20px);border-bottom:1px solid ${gborder};position:sticky;top:0;z-index:10">
+  <div style="max-width:860px;margin:0 auto;padding:0 28px;display:flex;justify-content:space-between;align-items:center;position:relative;z-index:1">
+    <span style="font-weight:700;background:linear-gradient(135deg,${gtext},${accent});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${esc(displayName)}</span>
+    <div style="display:flex;gap:18px;font-size:13px;color:${gmuted}">
+      ${sections.projects?`<a href="#projects" style="text-decoration:none;color:${gmuted}">Projetos</a>`:''}
+      ${sections.contact?`<a href="#contact" style="text-decoration:none;color:${gmuted}">Contato</a>`:''}
+    </div>
+  </div>
+</header>
+<section style="padding:80px 0;border-bottom:1px solid ${gborder};position:relative;z-index:1">
+  <div style="max-width:860px;margin:0 auto;padding:0 28px">
+    <div style="display:flex;align-items:center;gap:42px;flex-wrap:wrap">
+      <div style="width:120px;height:120px;overflow:hidden;${shapeStyle};border:2px solid ${accent}55;flex-shrink:0;box-shadow:0 0 30px ${accent}22">${photoEl}</div>
+      <div>
+        <p style="font-size:12px;letter-spacing:3px;text-transform:uppercase;color:${accent};margin-bottom:12px;opacity:.8">${esc(displayTitle)}</p>
+        <h1 style="font-size:clamp(26px,4vw,50px);font-weight:700;line-height:1.15;margin-bottom:12px;background:linear-gradient(135deg,${gtext} 40%,${accent});-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">${esc(displayName)}</h1>
+        ${tagline?`<p style="color:${accent};font-size:14px;margin-bottom:12px;opacity:.7">"${esc(tagline)}"</p>`:''}
+        <p style="color:${gmuted};font-size:14px;max-width:480px;line-height:1.8;margin-bottom:14px">${esc(displayBio)}</p>
+        <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:13px;color:${gmuted};margin-bottom:12px">
+          ${location?`<span>📍 ${esc(location)}</span>`:''}${yearsExp?`<span>⏱ ${esc(yearsExp)} anos</span>`:''}
+        </div>
+        ${availBadge(accent)}
+      </div>
+    </div>
+  </div>
+</section>
+${gsec(sections.tech,'Tecnologias',techBadges(accent,gsurface,gtext))}
+${gsec(sections.skills&&skills.some(s=>s.name),'Habilidades',`<div style="max-width:480px">${skillBars(accent)}</div>`)}
+${gsec(sections.services&&services.some(s=>s.name),'Serviços',serviceCards(accent,gsurface))}
+<div id="projects" style="position:relative;z-index:1">${gsec(sections.projects,'Projetos',projCards(accent,gsurface,gmuted))}</div>
+${gsec(sections.experiences&&experiences.some(e=>e.role),'Experiência',expTimeline(accent,gsurface))}
+${gsec(sections.education&&education.some(e=>e.course),'Educação',eduList(accent))}
+${gsec(sections.certs&&certs.some(c=>c.name),'Certificados',certBadges(accent))}
+<div id="contact" style="position:relative;z-index:1">${gsec(sections.contact,'Contato',`<div style="display:flex;flex-wrap:wrap;gap:10px">${socialBtns(gtext,gsurface,gborder)}</div>${sections.contactForm?contactForm(accent,gsurface,gtext):''}`)}</div>
+<footer style="border-top:1px solid ${gborder};padding:24px 0;text-align:center;position:relative;z-index:1">
+  <p style="font-size:13px;color:${gmuted}">${esc(footerText||`Portfolio de ${displayName}`)}</p>
+</footer>
+</body></html>`;
+}
+
+/* ══════════════════════════════════════════════════════
+   CUSTOM HOOKS
+══════════════════════════════════════════════════════ */
+function useDebounce(value, delay = 300) {
+  const [dv, setDv] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDv(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return dv;
+}
+
+/* ══════════════════════════════════════════════════════
+   SMALL UI COMPONENTS
+══════════════════════════════════════════════════════ */
+function Label({ children }) {
+  return <label style={{display:'block',fontSize:'10.5px',fontWeight:'600',color:'#666',letterSpacing:'.6px',textTransform:'uppercase',marginBottom:'5px'}}>{children}</label>;
+}
+
+function Input({ value, onChange, placeholder, type='text', style={}, ...rest }) {
+  const s = {
+    width:'100%', background:'#0e0e12', border:'1px solid #28282f',
+    borderRadius:'7px', color:'#f0f0f2', padding:'8px 11px',
+    fontFamily:'inherit', fontSize:'13px', outline:'none', transition:'border-color .15s', ...style
+  };
+  return <input type={type} value={value||''} onChange={e=>onChange(e.target.value)}
+    placeholder={placeholder} style={s}
+    onFocus={e=>e.target.style.borderColor='#c8f135'}
+    onBlur={e=>e.target.style.borderColor='#28282f'}
+    {...rest}/>;
+}
+
+function Textarea({ value, onChange, placeholder, rows=3 }) {
+  return <textarea value={value||''} onChange={e=>onChange(e.target.value)}
+    placeholder={placeholder} rows={rows}
+    style={{width:'100%',background:'#0e0e12',border:'1px solid #28282f',borderRadius:'7px',
+      color:'#f0f0f2',padding:'8px 11px',fontFamily:'inherit',fontSize:'13px',
+      outline:'none',resize:'vertical',transition:'border-color .15s'}}
+    onFocus={e=>e.target.style.borderColor='#c8f135'}
+    onBlur={e=>e.target.style.borderColor='#28282f'}/>;
+}
+
+function Select({ value, onChange, children, style={} }) {
+  return <select value={value||''} onChange={e=>onChange(e.target.value)}
+    style={{width:'100%',background:'#0e0e12',border:'1px solid #28282f',borderRadius:'7px',
+      color:'#f0f0f2',padding:'8px 11px',fontFamily:'inherit',fontSize:'13px',
+      outline:'none',appearance:'none',cursor:'pointer',
+      backgroundImage:"url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23666'/%3E%3C/svg%3E\")",
+      backgroundRepeat:'no-repeat',backgroundPosition:'right 10px center',
+      paddingRight:'28px',transition:'border-color .15s', ...style}}
+    onFocus={e=>e.target.style.borderColor='#c8f135'}
+    onBlur={e=>e.target.style.borderColor='#28282f'}>
+    {children}
+  </select>;
+}
+
+function Field({ label, children }) {
+  return <div style={{marginBottom:'13px'}}><Label>{label}</Label>{children}</div>;
+}
+
+function SectionTitle({ step, children }) {
+  return <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'18px'}}>
+    <span style={{fontFamily:"'Space Mono',monospace",fontSize:'9px',color:'#c8f135',background:'rgba(200,241,53,.1)',border:'1px solid rgba(200,241,53,.3)',padding:'2px 6px',borderRadius:'3px'}}>{step}</span>
+    <h2 style={{fontFamily:"'Syne',sans-serif",fontSize:'11px',fontWeight:'700',letterSpacing:'2px',textTransform:'uppercase',color:'#666'}}>{children}</h2>
+  </div>;
+}
+
+function Toggle({ checked, onChange, label }) {
+  return <label style={{display:'flex',alignItems:'center',gap:'10px',cursor:'pointer',padding:'7px 8px',borderRadius:'7px',transition:'background .15s'}}
+    onMouseEnter={e=>e.currentTarget.style.background='#1a1a20'}
+    onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+    <div onClick={()=>onChange(!checked)} style={{
+      width:'34px',height:'18px',borderRadius:'100px',position:'relative',flexShrink:0,
+      background:checked?'#c8f135':'#28282f',transition:'background .2s',cursor:'pointer'
+    }}>
+      <div style={{
+        position:'absolute',top:'3px',left:checked?'17px':'3px',
+        width:'12px',height:'12px',borderRadius:'50%',background:checked?'#000':'#666',
+        transition:'left .2s',
+      }}/>
+    </div>
+    <span style={{fontSize:'13px',color:'#c0c0c8'}}>{label}</span>
+  </label>;
+}
+
+function Btn({ onClick, children, variant='primary', full=false, small=false, style={} }) {
+  const base = { cursor:'pointer', borderRadius:'7px', fontFamily:'inherit', transition:'all .15s',
+    border:'none', fontWeight:'600', display:'inline-flex', alignItems:'center', justifyContent:'center', gap:'6px',
+    padding: small ? '6px 12px' : '9px 16px', fontSize: small ? '12px' : '13px',
+    width: full ? '100%' : 'auto', ...style };
+  const variants = {
+    primary: { background:'#c8f135', color:'#000' },
+    secondary: { background:'transparent', color:'#c0c0c8', border:'1px solid #28282f' },
+    ghost: { background:'transparent', color:'#666', border:'1px solid #222' },
+    danger: { background:'transparent', color:'#ff5566', border:'1px solid rgba(255,85,102,.2)' },
+    accent: { background:'rgba(200,241,53,.12)', color:'#c8f135', border:'1px solid rgba(200,241,53,.2)' },
+  };
+  const [hov, setHov] = useState(false);
+  const v = variants[variant] || variants.primary;
+  return <button onClick={onClick} style={{...base,...v,opacity:hov?.9:1,transform:hov&&variant==='primary'?'translateY(-1px)':'none'}}
+    onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}>{children}</button>;
+}
+
+function RadioGroup({ name, options, value, onChange }) {
+  return <div style={{display:'flex',flexWrap:'wrap',gap:'7px'}}>
+    {options.map(opt => <label key={opt.value} style={{
+      display:'flex',alignItems:'center',gap:'6px',cursor:'pointer',
+      padding:'6px 12px',borderRadius:'7px',fontSize:'12.5px',
+      background:value===opt.value?'rgba(200,241,53,.1)':'transparent',
+      border:`1px solid ${value===opt.value?'#c8f135':'#28282f'}`,
+      color:value===opt.value?'#c8f135':'#888',transition:'all .15s'
+    }}>
+      <input type="radio" name={name} value={opt.value} checked={value===opt.value}
+        onChange={()=>onChange(opt.value)} style={{display:'none'}}/>
+      {opt.label}
+    </label>)}
+  </div>;
+}
+
+function CollapsibleCard({ title, badge, onRemove, children, defaultOpen=true }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return <div style={{background:'#0c0c10',border:'1px solid #22222a',borderRadius:'10px',marginBottom:'10px',overflow:'hidden',animation:'fadeUp .15s ease'}}>
+    <div style={{display:'flex',alignItems:'center',gap:'8px',padding:'10px 12px',cursor:'pointer',userSelect:'none'}}
+      onClick={()=>setOpen(!open)}>
+      <span style={{fontFamily:"'Space Mono',monospace",fontSize:'9px',color:'#c8f135',opacity:.7,flex:1}}>{badge}</span>
+      <span style={{fontSize:'12px',color:'#888',fontWeight:'500',flex:4}}>{title||'(sem título)'}</span>
+      <span style={{fontSize:'11px',color:'#555'}}>{open?'▲':'▼'}</span>
+      <button onClick={e=>{e.stopPropagation();onRemove();}} style={{background:'none',border:'1px solid #28282f',color:'#555',width:'20px',height:'20px',borderRadius:'4px',cursor:'pointer',fontSize:'10px',display:'flex',alignItems:'center',justifyContent:'center'}}>✕</button>
+    </div>
+    {open && <div style={{padding:'0 12px 14px'}}>{children}</div>}
+  </div>;
+}
+
+/* ══════════════════════════════════════════════════════
+   MAIN APP
+══════════════════════════════════════════════════════ */
+function App() {
+  const [data, setData] = useState(() => {
+    try {
+      const saved = localStorage.getItem('ap-v3');
+      return saved ? {...initialData, ...JSON.parse(saved)} : initialData;
+    } catch { return initialData; }
+  });
+  const [tab, setTab] = useState('design');
+  const [mobilePreview, setMobilePreview] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
+  const [toast, setToast] = useState('');
+  const [dragIdx, setDragIdx] = useState(null);
+  const [techSearch, setTechSearch] = useState('');
+  const previewRef = useRef(null);
+  const fsRef = useRef(null);
+
+  const debouncedData = useDebounce(data, 180);
+  const portfolioHTML = useMemo(() => generatePortfolioHTML(debouncedData), [debouncedData]);
+
+  // Write preview
+  useEffect(() => {
+    [previewRef, fsRef].forEach(ref => {
+      if (!ref.current) return;
+      const doc = ref.current.contentDocument || ref.current.contentWindow?.document;
+      if (doc) { doc.open(); doc.write(portfolioHTML); doc.close(); }
+    });
+  }, [portfolioHTML, fullscreen]);
+
+  const up = useCallback((patch) => setData(d => ({...d, ...patch})), []);
+  const upArr = (key, fn) => setData(d => ({...d, [key]: fn(d[key])}));
+  const upItem = (key, id, patch) => upArr(key, arr => arr.map(x => x.id===id ? {...x,...patch} : x));
+  const removeItem = (key, id) => upArr(key, arr => arr.filter(x => x.id!==id));
+
+  const showToast = (msg, duration=2500) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), duration);
+  };
+
+  const addItem = (key, defaults={}) => upArr(key, arr => [...arr, {id:uid(), ...defaults}]);
+
+  function handlePhotoFile(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => up({photo: ev.target.result});
+    reader.readAsDataURL(file);
+  }
+
+  function exportHTML() {
+    const name = data.name || 'portfolio';
+    const slug = name.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+    const blob = new Blob([portfolioHTML], {type:'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    Object.assign(document.createElement('a'), {href:url, download:`${slug}-portfolio.html`}).click();
+    URL.revokeObjectURL(url);
+    showToast('✓ Download iniciado!');
+  }
+
+  function copyCode() {
+    navigator.clipboard?.writeText(portfolioHTML).then(() => showToast('✓ Código copiado!')).catch(() => {
+      const ta = Object.assign(document.createElement('textarea'), {value:portfolioHTML});
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+      showToast('✓ Código copiado!');
+    });
+  }
+
+  function saveDraft() {
+    try { localStorage.setItem('ap-v3', JSON.stringify(data)); showToast('💾 Salvo!'); }
+    catch { showToast('Erro ao salvar.'); }
+  }
+
+  function clearAll() {
+    if (!confirm('Limpar tudo?')) return;
+    localStorage.removeItem('ap-v3');
+    setData(initialData);
+    showToast('Dados limpos.');
+  }
+
+  const TABS = [
+    { id:'design',     icon:'🎨', label:'Design' },
+    { id:'perfil',     icon:'👤', label:'Perfil' },
+    { id:'tech',       icon:'⚡', label:'Tech' },
+    { id:'projetos',   icon:'🗂',  label:'Projetos' },
+    { id:'carreira',   icon:'💼', label:'Carreira' },
+    { id:'contato',    icon:'🔗', label:'Contato' },
+    { id:'exportar',   icon:'⬇', label:'Exportar' },
+  ];
+
+  const panel = {
+    height:'100%', overflowY:'auto', padding:'0',
+    scrollbarWidth:'thin', scrollbarColor:'#28282f transparent'
+  };
+  const section = { marginBottom:'28px', paddingBottom:'28px', borderBottom:'1px solid #1a1a22' };
+  const fieldRow = { display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px' };
+
+  const filteredTechs = Object.keys(TECH_DATA).filter(t =>
+    t.toLowerCase().includes(techSearch.toLowerCase()) && !data.technologies.includes(t)
+  );
+
+  // Drag-to-reorder
+  function onDragStart(key, idx) { setDragIdx({key, idx}); }
+  function onDrop(key, idx) {
+    if (!dragIdx || dragIdx.key !== key || dragIdx.idx === idx) { setDragIdx(null); return; }
+    upArr(key, arr => {
+      const a = [...arr];
+      const [item] = a.splice(dragIdx.idx, 1);
+      a.splice(idx, 0, item);
+      return a;
+    });
+    setDragIdx(null);
+  }
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',height:'100vh',overflow:'hidden'}}>
+
+      {/* ── HEADER ── */}
+      <header style={{height:'48px',background:'#111116',borderBottom:'1px solid #1e1e26',display:'flex',alignItems:'center',gap:'16px',padding:'0 18px',flexShrink:0,zIndex:20}}>
+        <div style={{display:'flex',alignItems:'center',gap:'8px',fontFamily:"'Syne',sans-serif",fontSize:'16px',flexShrink:0}}>
+          <span style={{color:'#c8f135',fontSize:'18px'}}>◈</span>
+          <span>Auto<strong>Portfolio</strong></span>
+          <span style={{fontFamily:"'Space Mono',monospace",fontSize:'9px',color:'#444',background:'#1a1a22',border:'1px solid #2a2a35',padding:'2px 6px',borderRadius:'3px'}}>v3</span>
+        </div>
+        <div style={{borderLeft:'1px solid #222',paddingLeft:'16px',fontSize:'10px',color:'#444',fontFamily:"'Space Mono',monospace",letterSpacing:'1.5px',flexShrink:0}}>STUDIO</div>
+        <div style={{marginLeft:'auto',display:'flex',gap:'7px'}}>
+          <Btn onClick={saveDraft} variant='ghost' small>💾</Btn>
+          <Btn onClick={clearAll} variant='danger' small>✕</Btn>
+          <Btn onClick={exportHTML} variant='primary' small>⬇ Exportar</Btn>
+        </div>
+      </header>
+
+      {/* ── BODY ── */}
+      <div style={{flex:1,display:'grid',gridTemplateColumns:'420px 1fr',overflow:'hidden'}}>
+
+        {/* ════ LEFT PANEL ════ */}
+        <aside style={{background:'#111116',borderRight:'1px solid #1e1e26',display:'flex',flexDirection:'column',overflow:'hidden'}}>
+
+          {/* TAB BAR */}
+          <div style={{display:'flex',overflowX:'auto',borderBottom:'1px solid #1e1e26',flexShrink:0,scrollbarWidth:'none'}}>
+            {TABS.map(t => <button key={t.id} onClick={()=>setTab(t.id)} style={{
+              flexShrink:0, background:'none', border:'none',
+              borderBottom:`2px solid ${tab===t.id?'#c8f135':'transparent'}`,
+              color: tab===t.id?'#c8f135':'#555', padding:'10px 13px',
+              fontSize:'11px', fontFamily:"'DM Sans',sans-serif",
+              cursor:'pointer', transition:'all .15s', whiteSpace:'nowrap',
+              display:'flex', alignItems:'center', gap:'5px'
+            }}>
+              <span>{t.icon}</span><span>{t.label}</span>
+            </button>)}
+          </div>
+
+          {/* TAB CONTENT */}
+          <div style={panel}>
+            <div style={{padding:'20px 18px 40px'}}>
+
+            {/* ══ DESIGN TAB ══ */}
+            {tab === 'design' && <>
+              <div style={section}>
+                <SectionTitle step="01">Template</SectionTitle>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px'}}>
+                  {TEMPLATE_OPTIONS.map(t => <div key={t.id} onClick={()=>up({template:t.id})} style={{
+                    cursor:'pointer', border:`2px solid ${data.template===t.id?'#c8f135':'#22222a'}`,
+                    borderRadius:'10px', padding:'12px', transition:'all .15s',
+                    background: data.template===t.id?'rgba(200,241,53,.07)':'transparent'
+                  }}>
+                    <div style={{fontSize:'12px',fontWeight:'600',color:data.template===t.id?'#c8f135':'#c0c0c8',marginBottom:'3px'}}>{t.label}</div>
+                    <div style={{fontSize:'10.5px',color:'#555'}}>{t.desc}</div>
+                  </div>)}
+                </div>
+              </div>
+
+              <div style={section}>
+                <SectionTitle step="02">Cor de Destaque</SectionTitle>
+                <div style={{display:'flex',flexWrap:'wrap',gap:'8px',marginBottom:'12px'}}>
+                  {ACCENT_PRESETS.map(p => <div key={p.color} onClick={()=>up({accentColor:p.color})} title={p.name} style={{
+                    width:'30px',height:'30px',borderRadius:'50%',background:p.color,cursor:'pointer',
+                    outline: data.accentColor===p.color?`3px solid ${p.color}`:'3px solid transparent',
+                    outlineOffset:'2px', transition:'transform .15s', transform: data.accentColor===p.color?'scale(1.1)':'scale(1)'
+                  }}/>)}
+                </div>
+                <div style={{display:'flex',alignItems:'center',gap:'10px'}}>
+                  <label style={{fontSize:'12px',color:'#666'}}>Personalizada:</label>
+                  <input type="color" value={data.accentColor}
+                    onChange={e=>up({accentColor:e.target.value})}
+                    style={{width:'36px',height:'36px',borderRadius:'8px',border:'1px solid #28282f',background:'#111',cursor:'pointer',padding:'2px'}}/>
+                  <span style={{fontFamily:"'Space Mono',monospace",fontSize:'11px',color:'#555'}}>{data.accentColor}</span>
+                </div>
+              </div>
+
+              <div style={section}>
+                <SectionTitle step="03">Fonte</SectionTitle>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:'7px'}}>
+                  {FONT_OPTIONS.map(f => <button key={f.id} onClick={()=>up({font:f.id})} style={{
+                    background: data.font===f.id?'rgba(200,241,53,.1)':'#0e0e12',
+                    border:`1px solid ${data.font===f.id?'#c8f135':'#28282f'}`,
+                    borderRadius:'7px', padding:'9px 6px', color: data.font===f.id?'#c8f135':'#888',
+                    fontFamily:f.stack, fontSize:'13px', cursor:'pointer', transition:'all .15s'
+                  }}>{f.label}</button>)}
+                </div>
+              </div>
+
+              <div style={section}>
+                <SectionTitle step="04">Layout do Hero</SectionTitle>
+                <RadioGroup name="hero" value={data.heroLayout} onChange={v=>up({heroLayout:v})} options={[
+                  {value:'side',label:'Lado a Lado'},{value:'center',label:'Centralizado'},{value:'banner',label:'Banner'}
+                ]}/>
+              </div>
+
+              <div style={section}>
+                <SectionTitle step="05">Seções Ativas</SectionTitle>
+                {[
+                  ['tech','Tecnologias'],['skills','Habilidades (barras)'],['projects','Projetos'],
+                  ['services','Serviços'],['experiences','Experiência'],['education','Educação'],
+                  ['certs','Certificados'],['contact','Contato'],['contactForm','Formulário de contato'],
+                ].map(([k,l]) => <Toggle key={k} checked={data.sections[k]} label={l}
+                  onChange={v=>up({sections:{...data.sections,[k]:v}})}/>)}
+              </div>
+
+              <div style={section}>
+                <SectionTitle step="06">CSS Personalizado</SectionTitle>
+                <Textarea value={data.customCSS} onChange={v=>up({customCSS:v})}
+                  placeholder="/* Escreva CSS personalizado que será injetado no portfólio */" rows={5}/>
+              </div>
+            </>}
+
+            {/* ══ PERFIL TAB ══ */}
+            {tab === 'perfil' && <>
+              <div style={section}>
+                <SectionTitle step="01">Identidade</SectionTitle>
+                <Field label="Nome Completo *"><Input value={data.name} onChange={v=>up({name:v})} placeholder="ex: Ana Lima"/></Field>
+                <Field label="Título Profissional *"><Input value={data.title} onChange={v=>up({title:v})} placeholder="ex: Front-End Developer"/></Field>
+                <Field label="Tagline / Slogan"><Input value={data.tagline} onChange={v=>up({tagline:v})} placeholder="ex: Transformando ideias em código"/></Field>
+                <Field label="Bio *"><Textarea value={data.bio} onChange={v=>up({bio:v})} placeholder="Fale sobre você, sua trajetória e paixões..." rows={4}/></Field>
+                <div style={fieldRow}>
+                  <Field label="Localização"><Input value={data.location} onChange={v=>up({location:v})} placeholder="São Paulo, SP"/></Field>
+                  <Field label="Anos de Exp."><Input value={data.yearsExp} onChange={v=>up({yearsExp:v})} placeholder="3+"/></Field>
+                </div>
+                <Field label="Disponibilidade">
+                  <Select value={data.availability} onChange={v=>up({availability:v})}>
+                    <option value="">Não exibir</option>
+                    <option value="open">🟢 Disponível para projetos</option>
+                    <option value="freelance">🟡 Freelance apenas</option>
+                    <option value="fulltime">🔵 Buscando emprego</option>
+                    <option value="busy">🔴 Ocupado no momento</option>
+                  </Select>
+                </Field>
+              </div>
+
+              <div style={section}>
+                <SectionTitle step="02">Foto de Perfil</SectionTitle>
+                <div style={{display:'flex',gap:'14px',alignItems:'flex-start'}}>
+                  <div style={{
+                    width:'72px',height:'72px',flexShrink:0,
+                    borderRadius: data.photoShape==='square'?'10px':data.photoShape==='hexagon'?'0':'50%',
+                    clipPath: data.photoShape==='hexagon'?'polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%)':'none',
+                    border:'2px solid #28282f',overflow:'hidden',
+                    background:'#0e0e12',display:'flex',alignItems:'center',justifyContent:'center',
+                  }}>
+                    {data.photo
+                      ? <img src={data.photo} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+                      : <span style={{fontSize:'26px',opacity:.3}}>◉</span>}
+                  </div>
+                  <div style={{flex:1,display:'flex',flexDirection:'column',gap:'8px'}}>
+                    <label style={{display:'inline-flex',alignItems:'center',gap:'6px',background:'#1a1a22',border:'1px solid #28282f',borderRadius:'7px',padding:'7px 12px',cursor:'pointer',fontSize:'12px',color:'#c0c0c8',transition:'border-color .15s'}}
+                      onMouseEnter={e=>e.currentTarget.style.borderColor='#c8f135'}
+                      onMouseLeave={e=>e.currentTarget.style.borderColor='#28282f'}>
+                      📁 Upload de imagem
+                      <input type="file" accept="image/*" hidden onChange={handlePhotoFile}/>
+                    </label>
+                    <Input value={data.photo?.startsWith('data:') ? '' : data.photo} onChange={v=>up({photo:v})} placeholder="ou cole uma URL aqui"/>
+                    {data.photo && <Btn onClick={()=>up({photo:''})} variant='danger' small>✕ Remover foto</Btn>}
+                  </div>
+                </div>
+                <div style={{marginTop:'14px'}}>
+                  <Label>Formato da foto</Label>
+                  <RadioGroup name="shape" value={data.photoShape} onChange={v=>up({photoShape:v})} options={[
+                    {value:'circle',label:'Círculo'},{value:'square',label:'Quadrado'},
+                    {value:'hexagon',label:'Hexágono'},{value:'blob',label:'Blob'},
+                  ]}/>
+                </div>
+              </div>
+
+              <div style={section}>
+                <SectionTitle step="03">Serviços / O que faço</SectionTitle>
+                {data.services.map((svc,i) => <CollapsibleCard key={svc.id} badge={`SVC-${String(i+1).padStart(2,'0')}`}
+                  title={svc.name} onRemove={()=>removeItem('services',svc.id)} defaultOpen={false}>
+                  <div style={fieldRow}>
+                    <Field label="Emoji/Ícone"><Input value={svc.icon} onChange={v=>upItem('services',svc.id,{icon:v})} placeholder="💻" style={{textAlign:'center',fontSize:'20px'}}/></Field>
+                    <Field label="Nome"><Input value={svc.name} onChange={v=>upItem('services',svc.id,{name:v})} placeholder="Desenvolvimento Web"/></Field>
+                  </div>
+                  <Field label="Descrição"><Textarea value={svc.desc} onChange={v=>upItem('services',svc.id,{desc:v})} placeholder="Descreva o serviço..." rows={2}/></Field>
+                </CollapsibleCard>)}
+                <Btn onClick={()=>addItem('services',{icon:'',name:'',desc:''})} variant='secondary' full>+ Adicionar Serviço</Btn>
+              </div>
+            </>}
+
+            {/* ══ TECH TAB ══ */}
+            {tab === 'tech' && <>
+              <div style={section}>
+                <SectionTitle step="01">Tecnologias</SectionTitle>
+                <Input value={techSearch} onChange={setTechSearch} placeholder="🔍 Buscar tecnologia..."/>
+                <div style={{display:'flex',flexWrap:'wrap',gap:'6px',maxHeight:'200px',overflowY:'auto',padding:'10px 0'}}>
+                  {filteredTechs.slice(0,60).map(t => {
+                    const info = TECH_DATA[t];
+                    return <button key={t} onClick={()=>upArr('technologies',arr=>[...arr,t])} style={{
+                      background:'#0e0e12',border:'1px solid #22222a',borderRadius:'100px',
+                      color:'#999',padding:'5px 11px',fontSize:'11.5px',cursor:'pointer',
+                      display:'flex',alignItems:'center',gap:'5px',transition:'all .15s'
+                    }}
+                      onMouseEnter={e=>{ e.currentTarget.style.borderColor='#c8f135'; e.currentTarget.style.color='#c8f135'; }}
+                      onMouseLeave={e=>{ e.currentTarget.style.borderColor='#22222a'; e.currentTarget.style.color='#999'; }}>
+                      <span>{info.emoji}</span>{t}
+                    </button>;
+                  })}
+                  {techSearch && !filteredTechs.includes(techSearch) && techSearch.length > 1 &&
+                    <button onClick={()=>{ upArr('technologies',arr=>[...arr,techSearch]); setTechSearch(''); }} style={{
+                      background:'rgba(200,241,53,.1)',border:'1px solid #c8f135',borderRadius:'100px',
+                      color:'#c8f135',padding:'5px 11px',fontSize:'11.5px',cursor:'pointer'
+                    }}>+ Adicionar "{techSearch}"</button>}
+                </div>
+                {data.technologies.length > 0 && <>
+                  <Label>Selecionadas ({data.technologies.length})</Label>
+                  <div style={{display:'flex',flexWrap:'wrap',gap:'6px'}}>
+                    {data.technologies.map(t => <span key={t} style={{
+                      display:'inline-flex',alignItems:'center',gap:'6px',background:'rgba(200,241,53,.08)',
+                      border:'1px solid rgba(200,241,53,.2)',color:'#c8f135',
+                      padding:'4px 10px 4px 12px',borderRadius:'100px',fontSize:'12px'
+                    }}>
+                      {TECH_DATA[t]?.emoji} {t}
+                      <button onClick={()=>upArr('technologies',arr=>arr.filter(x=>x!==t))} style={{
+                        background:'none',border:'none',color:'rgba(200,241,53,.5)',cursor:'pointer',fontSize:'12px',padding:'0',lineHeight:'1'
+                      }}>✕</button>
+                    </span>)}
+                  </div>
+                </>}
+              </div>
+
+              <div style={section}>
+                <SectionTitle step="02">Estilo das Tecnologias</SectionTitle>
+                <RadioGroup name="techStyle" value={data.techDisplayStyle} onChange={v=>up({techDisplayStyle:v})} options={[
+                  {value:'badge',label:'Badge'},{value:'icon',label:'Ícone + Nome'},{value:'card',label:'Card'},
+                ]}/>
+              </div>
+
+              <div style={section}>
+                <SectionTitle step="03">Habilidades com Barra</SectionTitle>
+                {data.skills.map((sk,i) => <div key={sk.id} style={{marginBottom:'10px',padding:'10px 12px',background:'#0c0c10',border:'1px solid #22222a',borderRadius:'9px',animation:'fadeUp .15s'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:'8px'}}>
+                    <Input value={sk.name} onChange={v=>upItem('skills',sk.id,{name:v})} placeholder="ex: React" style={{flex:1,marginBottom:0}}/>
+                    <input type="range" min="10" max="100" value={sk.level} step="5"
+                      onChange={e=>upItem('skills',sk.id,{level:parseInt(e.target.value)})}
+                      style={{flex:2,accentColor:'#c8f135'}}/>
+                    <span style={{fontFamily:"'Space Mono',monospace",fontSize:'11px',color:'#c8f135',width:'34px',textAlign:'right',flexShrink:0}}>{sk.level}%</span>
+                    <button onClick={()=>removeItem('skills',sk.id)} style={{background:'none',border:'1px solid #28282f',color:'#555',width:'22px',height:'22px',borderRadius:'4px',cursor:'pointer',fontSize:'10px',flexShrink:0}}>✕</button>
+                  </div>
+                  <div style={{background:'rgba(128,128,128,.15)',borderRadius:'100px',height:'3px',marginTop:'8px'}}>
+                    <div style={{background:'#c8f135',width:`${sk.level}%`,height:'100%',borderRadius:'100px',transition:'width .3s'}}/>
+                  </div>
+                </div>)}
+                <Btn onClick={()=>addItem('skills',{name:'',level:75})} variant='secondary' full>+ Adicionar Habilidade</Btn>
+              </div>
+            </>}
+
+            {/* ══ PROJETOS TAB ══ */}
+            {tab === 'projetos' && <>
+              <div style={section}>
+                <SectionTitle step="01">Layout dos Projetos</SectionTitle>
+                <RadioGroup name="projLayout" value={data.projLayout} onChange={v=>up({projLayout:v})} options={[
+                  {value:'grid',label:'Grid'},{value:'list',label:'Lista'},{value:'featured',label:'Destaque'},
+                ]}/>
+              </div>
+              <div style={section}>
+                <SectionTitle step="02">Projetos</SectionTitle>
+                <p style={{fontSize:'11px',color:'#555',marginBottom:'12px'}}>Arraste para reordenar</p>
+                {data.projects.map((p,i) => <div key={p.id}
+                  draggable onDragStart={()=>onDragStart('projects',i)}
+                  onDragOver={e=>{e.preventDefault();}}
+                  onDrop={()=>onDrop('projects',i)}
+                  style={{cursor:'grab'}}>
+                  <CollapsibleCard badge={`PROJ-${String(i+1).padStart(2,'0')}`}
+                    title={p.name} onRemove={()=>removeItem('projects',p.id)} defaultOpen={i===0}>
+                    <Field label="Nome"><Input value={p.name} onChange={v=>upItem('projects',p.id,{name:v})} placeholder="TaskFlow App"/></Field>
+                    <Field label="Categoria"><Input value={p.type} onChange={v=>upItem('projects',p.id,{type:v})} placeholder="Web App, API, Mobile..."/></Field>
+                    <Field label="Descrição"><Textarea value={p.desc} onChange={v=>upItem('projects',p.id,{desc:v})} placeholder="Descreva o projeto..." rows={2}/></Field>
+                    <div style={fieldRow}>
+                      <Field label="Link Demo"><Input value={p.link} onChange={v=>upItem('projects',p.id,{link:v})} placeholder="https://..."/></Field>
+                      <Field label="Repositório"><Input value={p.repo} onChange={v=>upItem('projects',p.id,{repo:v})} placeholder="github.com/..."/></Field>
+                    </div>
+                    <Field label="Imagem (URL)"><Input value={p.img} onChange={v=>upItem('projects',p.id,{img:v})} placeholder="https://..."/></Field>
+                    <Field label="Tags (separadas por vírgula)"><Input value={p.tags} onChange={v=>upItem('projects',p.id,{tags:v})} placeholder="React, Node, MongoDB"/></Field>
+                    <Toggle checked={p.featured||false} onChange={v=>upItem('projects',p.id,{featured:v})} label="Projeto em destaque ⭐"/>
+                  </CollapsibleCard>
+                </div>)}
+                <Btn onClick={()=>addItem('projects',{name:'',type:'',desc:'',link:'',repo:'',img:'',tags:'',featured:false})} variant='secondary' full>+ Adicionar Projeto</Btn>
+              </div>
+            </>}
+
+            {/* ══ CARREIRA TAB ══ */}
+            {tab === 'carreira' && <>
+              <div style={section}>
+                <SectionTitle step="01">Experiência Profissional</SectionTitle>
+                {data.experiences.map((e,i) => <div key={e.id} draggable onDragStart={()=>onDragStart('experiences',i)} onDragOver={ev=>ev.preventDefault()} onDrop={()=>onDrop('experiences',i)}>
+                  <CollapsibleCard badge={`EXP-${String(i+1).padStart(2,'0')}`} title={e.role||e.company} onRemove={()=>removeItem('experiences',e.id)} defaultOpen={i===0}>
+                    <div style={fieldRow}>
+                      <Field label="Cargo"><Input value={e.role} onChange={v=>upItem('experiences',e.id,{role:v})} placeholder="Front-End Dev"/></Field>
+                      <Field label="Empresa"><Input value={e.company} onChange={v=>upItem('experiences',e.id,{company:v})} placeholder="Google"/></Field>
+                    </div>
+                    <div style={fieldRow}>
+                      <Field label="Início"><Input value={e.start} onChange={v=>upItem('experiences',e.id,{start:v})} placeholder="Jan 2022"/></Field>
+                      <Field label="Fim"><Input value={e.end} onChange={v=>upItem('experiences',e.id,{end:v})} placeholder="Atual"/></Field>
+                    </div>
+                    <Field label="Descrição"><Textarea value={e.desc} onChange={v=>upItem('experiences',e.id,{desc:v})} placeholder="Responsabilidades e conquistas..." rows={2}/></Field>
+                    <Field label="Logo da empresa (URL)"><Input value={e.logo} onChange={v=>upItem('experiences',e.id,{logo:v})} placeholder="https://logo.clearbit.com/google.com"/></Field>
+                  </CollapsibleCard>
+                </div>)}
+                <Btn onClick={()=>addItem('experiences',{role:'',company:'',start:'',end:'',desc:'',logo:''})} variant='secondary' full>+ Adicionar Experiência</Btn>
+              </div>
+
+              <div style={section}>
+                <SectionTitle step="02">Educação</SectionTitle>
+                {data.education.map((e,i) => <CollapsibleCard key={e.id} badge={`EDU-${String(i+1).padStart(2,'0')}`} title={e.course||e.institution} onRemove={()=>removeItem('education',e.id)} defaultOpen={false}>
+                  <div style={fieldRow}>
+                    <Field label="Curso"><Input value={e.course} onChange={v=>upItem('education',e.id,{course:v})} placeholder="Ciência da Computação"/></Field>
+                    <Field label="Instituição"><Input value={e.institution} onChange={v=>upItem('education',e.id,{institution:v})} placeholder="USP"/></Field>
+                  </div>
+                  <div style={fieldRow}>
+                    <Field label="Início"><Input value={e.start} onChange={v=>upItem('education',e.id,{start:v})} placeholder="2018"/></Field>
+                    <Field label="Fim"><Input value={e.end} onChange={v=>upItem('education',e.id,{end:v})} placeholder="2022"/></Field>
+                  </div>
+                </CollapsibleCard>)}
+                <Btn onClick={()=>addItem('education',{course:'',institution:'',start:'',end:''})} variant='secondary' full>+ Adicionar Formação</Btn>
+              </div>
+
+              <div style={section}>
+                <SectionTitle step="03">Certificados</SectionTitle>
+                {data.certs.map((c,i) => <CollapsibleCard key={c.id} badge={`CERT-${String(i+1).padStart(2,'0')}`} title={c.name} onRemove={()=>removeItem('certs',c.id)} defaultOpen={false}>
+                  <div style={fieldRow}>
+                    <Field label="Nome"><Input value={c.name} onChange={v=>upItem('certs',c.id,{name:v})} placeholder="AWS Certified"/></Field>
+                    <Field label="Emissor"><Input value={c.issuer} onChange={v=>upItem('certs',c.id,{issuer:v})} placeholder="Amazon"/></Field>
+                  </div>
+                  <div style={fieldRow}>
+                    <Field label="Ano"><Input value={c.year} onChange={v=>upItem('certs',c.id,{year:v})} placeholder="2024"/></Field>
+                    <Field label="Link"><Input value={c.link} onChange={v=>upItem('certs',c.id,{link:v})} placeholder="https://..."/></Field>
+                  </div>
+                </CollapsibleCard>)}
+                <Btn onClick={()=>addItem('certs',{name:'',issuer:'',year:'',link:''})} variant='secondary' full>+ Adicionar Certificado</Btn>
+              </div>
+            </>}
+
+            {/* ══ CONTATO TAB ══ */}
+            {tab === 'contato' && <>
+              <div style={section}>
+                <SectionTitle step="01">Redes Sociais</SectionTitle>
+                {SOCIAL_NETWORKS.map(n => <div key={n.id} style={{display:'flex',alignItems:'center',border:'1px solid #22222a',borderRadius:'8px',overflow:'hidden',marginBottom:'7px',background:'#0e0e12',transition:'border-color .15s'}}
+                  onFocusWithin={e=>e.currentTarget.style.borderColor='#c8f135'}
+                  onBlur={e=>e.currentTarget.style.borderColor='#22222a'}>
+                  <div style={{padding:'0 10px',display:'flex',alignItems:'center',gap:'6px',borderRight:'1px solid #22222a',height:'36px',flexShrink:0,fontSize:'11px',color:'#555',fontFamily:"'Space Mono',monospace",minWidth:'90px'}}>
+                    <span style={{width:'14px',height:'14px',display:'inline-flex',alignItems:'center',opacity:.7}} dangerouslySetInnerHTML={{__html:SVG_ICONS[n.id]||SVG_ICONS.website}}/>
+                    {n.label}
+                  </div>
+                  <input value={data.social[n.id]||''} onChange={e=>up({social:{...data.social,[n.id]:e.target.value}})}
+                    placeholder={n.placeholder} style={{flex:1,background:'transparent',border:'none',color:'#c0c0c8',padding:'0 10px',fontSize:'12.5px',outline:'none',fontFamily:'inherit'}}/>
+                </div>)}
+              </div>
+
+              <div style={section}>
+                <SectionTitle step="02">Estilo dos Botões Sociais</SectionTitle>
+                <Field label="Conteúdo">
+                  <RadioGroup name="sStyle" value={data.socialStyle} onChange={v=>up({socialStyle:v})} options={[
+                    {value:'icon-text',label:'Ícone + Texto'},{value:'icon-only',label:'Só Ícone'},{value:'text-only',label:'Só Texto'}
+                  ]}/>
+                </Field>
+                <Field label="Formato">
+                  <RadioGroup name="sShape" value={data.socialShape} onChange={v=>up({socialShape:v})} options={[
+                    {value:'rounded',label:'Arredondado'},{value:'pill',label:'Pílula'},{value:'square',label:'Quadrado'}
+                  ]}/>
+                </Field>
+              </div>
+
+              <div style={section}>
+                <SectionTitle step="03">Rodapé</SectionTitle>
+                <Field label="Texto do rodapé"><Input value={data.footerText} onChange={v=>up({footerText:v})} placeholder="Feito com ❤️ por Ana Lima"/></Field>
+              </div>
+            </>}
+
+            {/* ══ EXPORTAR TAB ══ */}
+            {tab === 'exportar' && <>
+              <div style={section}>
+                <SectionTitle step="01">Exportar Portfólio</SectionTitle>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px',marginBottom:'16px'}}>
+                  <Btn onClick={exportHTML} variant='primary' full>⬇ Baixar HTML</Btn>
+                  <Btn onClick={copyCode} variant='secondary' full>⎘ Copiar Código</Btn>
+                </div>
+                <div style={{background:'#0e0e12',border:'1px solid #22222a',borderRadius:'10px',padding:'14px',display:'flex',flexDirection:'column',gap:'7px'}}>
+                  {['Arquivo único, sem dependências','Funciona offline, abre no browser','Pronto para GitHub Pages / Netlify','SEO amigável com meta tags','Totalmente responsivo (mobile)'].map(t =>
+                    <div key={t} style={{display:'flex',alignItems:'center',gap:'8px',fontSize:'12.5px',color:'#888'}}>
+                      <span style={{color:'#c8f135',fontSize:'11px'}}>✓</span>{t}
+                    </div>)}
+                </div>
+              </div>
+
+              <div style={section}>
+                <SectionTitle step="02">SEO & Meta</SectionTitle>
+                <Field label="Meta Description"><Textarea value={data.metaDesc} onChange={v=>up({metaDesc:v})} placeholder="Descrição para mecanismos de busca..." rows={2}/></Field>
+                <Field label="Keywords"><Input value={data.metaKeywords} onChange={v=>up({metaKeywords:v})} placeholder="desenvolvedor, front-end, react"/></Field>
+                <Field label="Idioma do Portfólio">
+                  <Select value={data.pageLang} onChange={v=>up({pageLang:v})}>
+                    <option value="pt-BR">🇧🇷 Português (BR)</option>
+                    <option value="en">🇺🇸 English</option>
+                    <option value="es">🇪🇸 Español</option>
+                    <option value="fr">🇫🇷 Français</option>
+                    <option value="de">🇩🇪 Deutsch</option>
+                  </Select>
+                </Field>
+              </div>
+
+              <div style={section}>
+                <SectionTitle step="03">Salvar Rascunho</SectionTitle>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'10px'}}>
+                  <Btn onClick={saveDraft} variant='ghost' full>💾 Salvar Localmente</Btn>
+                  <Btn onClick={clearAll} variant='danger' full>✕ Limpar Tudo</Btn>
+                </div>
+              </div>
+            </>}
+
+            </div>
+          </div>
+        </aside>
+
+        {/* ════ PREVIEW PANEL ════ */}
+        <div style={{display:'flex',flexDirection:'column',background:'#0a0a0e',overflow:'hidden'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'8px 14px',borderBottom:'1px solid #1a1a22',background:'#111116',flexShrink:0}}>
+            <span style={{fontFamily:"'Space Mono',monospace",fontSize:'10px',color:'#444',letterSpacing:'1.5px'}}>◈ PREVIEW AO VIVO</span>
+            <div style={{display:'flex',gap:'6px'}}>
+              <button onClick={()=>setMobilePreview(!mobilePreview)} style={{
+                background:mobilePreview?'rgba(200,241,53,.12)':'#1a1a22',
+                border:`1px solid ${mobilePreview?'#c8f135':'#28282f'}`,
+                color:mobilePreview?'#c8f135':'#666',
+                width:'30px',height:'30px',borderRadius:'6px',cursor:'pointer',fontSize:'14px',
+                display:'flex',alignItems:'center',justifyContent:'center',transition:'all .15s'
+              }} title="Mobile preview">📱</button>
+              <button onClick={()=>setFullscreen(true)} style={{
+                background:'#1a1a22',border:'1px solid #28282f',color:'#666',
+                width:'30px',height:'30px',borderRadius:'6px',cursor:'pointer',fontSize:'14px',
+                display:'flex',alignItems:'center',justifyContent:'center',transition:'all .15s'
+              }} onMouseEnter={e=>{e.target.style.color='#c8f135';e.target.style.borderColor='#c8f135';}}
+                onMouseLeave={e=>{e.target.style.color='#666';e.target.style.borderColor='#28282f';}}
+                title="Tela cheia">⛶</button>
+            </div>
+          </div>
+          <div style={{flex:1,overflow:'hidden',display:'flex',alignItems:'flex-start',justifyContent:'center',background:mobilePreview?'#1a1a22':'transparent',padding:mobilePreview?'20px':'0',transition:'all .3s'}}>
+            <iframe ref={previewRef} title="Preview"
+              style={{
+                width: mobilePreview ? '390px' : '100%',
+                height: mobilePreview ? '844px' : '100%',
+                borderRadius: mobilePreview ? '20px' : '0',
+                boxShadow: mobilePreview ? '0 0 0 10px #0a0a10, 0 24px 60px rgba(0,0,0,.6)' : 'none',
+                flexShrink: 0,
+                transition: 'all .3s cubic-bezier(.4,0,.2,1)',
+                border: 'none',
+              }}
+            />
+          </div>
+        </div>
+
+      </div>
+
+      {/* ── FULLSCREEN OVERLAY ── */}
+      {fullscreen && <div style={{position:'fixed',inset:0,zIndex:999,background:'#000',display:'flex',flexDirection:'column'}}>
+        <div style={{padding:'12px 16px',display:'flex',justifyContent:'flex-end',background:'rgba(0,0,0,.8)'}}>
+          <Btn onClick={()=>setFullscreen(false)} variant='secondary'>✕ Fechar Fullscreen</Btn>
+        </div>
+        <iframe ref={fsRef} title="Fullscreen" style={{flex:1,border:'none',display:'block'}}/>
+      </div>}
+
+      {/* ── TOAST ── */}
+      {toast && <div style={{
+        position:'fixed',bottom:'24px',right:'24px',zIndex:9999,
+        background:'#1a1a22',border:'1px solid #c8f135',color:'#c8f135',
+        padding:'10px 18px',borderRadius:'8px',fontSize:'13px',fontFamily:"'Space Mono',monospace",
+        letterSpacing:'.5px',animation:'fadeUp .2s ease',boxShadow:'0 8px 24px rgba(0,0,0,.4)'
+      }}>{toast}</div>}
+
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
