@@ -2,9 +2,7 @@
 
 > Gere um portfólio profissional completo em minutos — sem servidor, sem npm, sem configuração.
 
-![AutoPortfolio Preview](https://jottaramoss.github.io/AutoPortfolio/)
 
----
 
 ## ✨ O que é
 
