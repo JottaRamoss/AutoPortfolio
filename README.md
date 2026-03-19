@@ -2,7 +2,7 @@
 
 > Gere um portfólio profissional completo em minutos — sem servidor, sem npm, sem configuração.
 
-![AutoPortfolio Preview](https://via.placeholder.com/1280x640/0e0e10/c8f135?text=AutoPortfolio+Studio)
+![AutoPortfolio Preview](https://jottaramoss.github.io/AutoPortfolio/)
 
 ---
 
@@ -16,7 +16,7 @@ Projeto pessoal construído inteiramente no navegador, sem dependências externa
 
 ## 🚀 Demo
 
-**[→ Abrir AutoPortfolio](https://seu-usuario.github.io/autoportfolio)**
+**[→ Abrir AutoPortfolio](https://jottaramoss.github.io/AutoPortfolio/)**
 
 ---
 
@@ -189,4 +189,4 @@ MIT — use, modifique e distribua à vontade. Se usar como base para algo, um c
 
 ---
 
-<p align="center">Feito com ☕ como projeto pessoal · <a href="https://seu-usuario.github.io/autoportfolio">autoportfolio</a></p>
+<p align="center">Feito com ☕ como projeto pessoal · <a href="https://jottaramoss.github.io/AutoPortfolio/">autoportfolio</a></p>
